@@ -192,12 +192,6 @@
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Summertime '06",
-    "artist": "Vince Staples",
-    "release_year": "2015",
-    "verified_genre": "Hip-Hop"
-  },
-  {
     "album_title": "808s & Heartbreak",
     "artist": "Kanye West",
     "release_year": "2008",
@@ -298,12 +292,6 @@
     "artist": "Public Enemy",
     "release_year": "1987",
     "verified_genre": "Hip-Hop"
-  },
-  {
-    "album_title": "The Money Store",
-    "artist": "Death Grips",
-    "release_year": "2012",
-    "verified_genre": "Experimental Hip-Hop / Industrial"
   },
   {
     "album_title": "Coloring Book",
@@ -492,12 +480,6 @@
     "verified_genre": "Hip-Hop (G-Funk)"
   },
   {
-    "album_title": "Curtis",
-    "artist": "Curtis Mayfield",
-    "release_year": "1970",
-    "verified_genre": "Soul / Funk"
-  },
-  {
     "album_title": "Reasonable Doubt",
     "artist": "Jay-Z",
     "release_year": "1996",
@@ -546,18 +528,6 @@
     "verified_genre": "Hip-Hop / R&B"
   },
   {
-    "album_title": "Hot Buttered Soul",
-    "artist": "Isaac Hayes",
-    "release_year": "1969",
-    "verified_genre": "Soul / Funk"
-  },
-  {
-    "album_title": "Arular",
-    "artist": "M.I.A.",
-    "release_year": "2005",
-    "verified_genre": "Electronic / Hip-Hop"
-  },
-  {
     "album_title": "Since I Left You",
     "artist": "The Avalanches",
     "release_year": "2000",
@@ -576,26 +546,8 @@
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Baduizm",
-    "artist": "Erykah Badu",
-    "release_year": "1997",
-    "verified_genre": "Neo-Soul / R&B"
-  },
-  {
-    "album_title": "Mothership Connection",
-    "artist": "Funkadelic/Parliament",
-    "release_year": "1975",
-    "verified_genre": "Funk"
-  },
-  {
-    "album_title": "CrazySexyCool",
-    "artist": "TLC",
-    "release_year": "1994",
-    "verified_genre": "R&B / Hip-Hop"
-  },
-  {
-    "album_title": "Ice-T",
-    "artist": "O.G. Original Gangster",
+    "album_title": "O.G. Original Gangster",
+    "artist": "Ice-T",
     "release_year": "1991",
     "verified_genre": "Hip-Hop"
   },
@@ -630,26 +582,8 @@
     "verified_genre": "Hip-Hop (Abstract)"
   },
   {
-    "album_title": "The Internet",
-    "artist": "Ego Death",
-    "release_year": "2015",
-    "verified_genre": "Neo-Soul / R&B"
-  },
-  {
-    "album_title": "The Internet",
-    "artist": "Hive Mind",
-    "release_year": "2018",
-    "verified_genre": "Neo-Soul / R&B"
-  },
-  {
-    "album_title": "Prefuse 73",
-    "artist": "Vocal Studies + Uprock Narratives",
-    "release_year": "2001",
-    "verified_genre": "Instrumental Hip-Hop / Glitch Pop"
-  },
-  {
-    "album_title": "Blackalicious",
-    "artist": "Blazing Arrow",
+    "album_title": "Blazing Arrow",
+    "artist": "Blackalicious",
     "release_year": "2002",
     "verified_genre": "Hip-Hop"
   },
@@ -666,88 +600,40 @@
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Music for the Jilted Generation",
-    "artist": "The Prodigy",
-    "release_year": "1994",
-    "verified_genre": "Electronic / Breakbeat"
-  },
-  {
-    "album_title": "Brown Sugar",
-    "artist": "D'Angelo",
-    "release_year": "1995",
-    "verified_genre": "Neo-Soul / R&B"
-  },
-  {
-    "album_title": "Drunk",
-    "artist": "Thundercat",
-    "release_year": "2017",
-    "verified_genre": "Neo-Soul / R&B"
-  },
-  {
-    "album_title": "When I Get Home",
-    "artist": "Solange",
-    "release_year": "2019",
-    "verified_genre": "Neo-Soul / R&B"
-  },
-  {
-    "album_title": "Pieces of a Man",
-    "artist": "Gil Scott-Heron",
-    "release_year": "1971",
-    "verified_genre": "Soul / Spoken Word"
-  },
-  {
-    "album_title": "The Roots",
-    "artist": "Game Theory",
+    "album_title": "Game Theory",
+    "artist": "The Roots",
     "release_year": "2006",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "The Roots",
-    "artist": "Do You Want More?!!!??!",
+    "album_title": "Do You Want More?!!!??!",
+    "artist": "The Roots",
     "release_year": "1995",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Migos",
-    "artist": "Culture",
+    "album_title": "Culture",
+    "artist": "Migos",
     "release_year": "2017",
     "verified_genre": "Hip-Hop (Trap)"
   },
   {
-    "album_title": "Funkadelic/Parliament",
-    "artist": "Free Your Mind... and Your Ass Will Follow",
-    "release_year": "1970",
-    "verified_genre": "Funk"
-  },
-  {
-    "album_title": "Scarface",
-    "artist": "The Fix",
+    "album_title": "The Fix",
+    "artist": "Scarface",
     "release_year": "2002",
     "verified_genre": "Hip-Hop (Southern Rap)"
   },
   {
-    "album_title": "Jurassic 5",
-    "artist": "Quality Control",
+    "album_title": "Quality Control",
+    "artist": "Jurassic 5",
     "release_year": "2000",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Lil Wayne",
-    "artist": "Da Drought 3",
+    "album_title": "Da Drought 3",
+    "artist": "Lil Wayne",
     "release_year": "2007",
     "verified_genre": "Hip-Hop (Mixtape)"
-  },
-  {
-    "album_title": "Funkadelic/Parliament",
-    "artist": "One Nation Under a Groove",
-    "release_year": "1978",
-    "verified_genre": "Funk"
-  },
-  {
-    "album_title": "The Fat of the Land",
-    "artist": "The Prodigy",
-    "release_year": "1997",
-    "verified_genre": "Electronic / Big Beat"
   },
   {
     "album_title": "Fear of a Black Planet",
@@ -756,362 +642,290 @@
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Kala",
-    "artist": "M.I.A.",
-    "release_year": "2007",
-    "verified_genre": "Electronic / Hip-Hop"
-  },
-  {
-    "album_title": "OutKast",
-    "artist": "ATLiens",
+    "album_title": "ATLiens",
+    "artist": "OutKast",
     "release_year": "1996",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Jungle Brothers",
-    "artist": "Done by the Forces of Nature",
+    "album_title": "Done by the Forces of Nature",
+    "artist": "Jungle Brothers",
     "release_year": "1989",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Public Enemy",
-    "artist": "Apocalypse '91 - The Enemy Strikes Black",
+    "album_title": "Apocalypse '91 - The Enemy Strikes Black",
+    "artist": "Public Enemy",
     "release_year": "1991",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Death Grips",
-    "artist": "The Money Store",
-    "release_year": "2012",
-    "verified_genre": "Experimental Hip-Hop / Industrial"
-  },
-  {
-    "album_title": "Thundercat",
-    "artist": "Drunk",
-    "release_year": "2017",
-    "verified_genre": "Neo-Soul / R&B"
-  },
-  {
-    "album_title": "Dizzee Rascal",
-    "artist": "Boy in da Corner",
+    "album_title": "Boy in da Corner",
+    "artist": "Dizzee Rascal",
     "release_year": "2003",
     "verified_genre": "Grime / UK Hip-Hop"
   },
   {
-    "album_title": "The Streets",
-    "artist": "Original Pirate Material",
+    "album_title": "Original Pirate Material",
+    "artist": "The Streets",
     "release_year": "2002",
     "verified_genre": "UK Garage / Hip-Hop"
   },
   {
-    "album_title": "Tyler, the Creator",
-    "artist": "IGOR",
+    "album_title": "IGOR",
+    "artist": "Tyler, the Creator",
     "release_year": "2019",
     "verified_genre": "Hip-Hop / Neo-Soul"
   },
   {
-    "album_title": "Clipe",
-    "artist": "Hell Hath No Fury",
+    "album_title": "Hell Hath No Fury",
+    "artist": "Clipse",
     "release_year": "2006",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Cardi B",
-    "artist": "Invasion of Privacy",
+    "album_title": "Invasion of Privacy",
+    "artist": "Cardi B",
     "release_year": "2018",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Vince Staples",
-    "artist": "Big Fish Theory",
+    "album_title": "Big Fish Theory",
+    "artist": "Vince Staples",
     "release_year": "2017",
     "verified_genre": "Hip-Hop / Electronic"
   },
   {
-    "album_title": "Lil Wayne",
-    "artist": "Tha Carter III",
+    "album_title": "Tha Carter III",
+    "artist": "Lil Wayne",
     "release_year": "2008",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Mos Def",
-    "artist": "Black on Both Sides",
+    "album_title": "Black on Both Sides",
+    "artist": "Mos Def",
     "release_year": "1999",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Cannibal Ox",
-    "artist": "The Cold Vein",
+    "album_title": "The Cold Vein",
+    "artist": "Cannibal Ox",
     "release_year": "2001",
     "verified_genre": "Hip-Hop (Abstract)"
   },
   {
-    "album_title": "Tyler, the Creator",
-    "artist": "Flower Boy",
+    "album_title": "Flower Boy",
+    "artist": "Tyler, the Creator",
     "release_year": "2017",
     "verified_genre": "Hip-Hop / Neo-Soul"
   },
   {
-    "album_title": "Ghostface Killah",
-    "artist": "Fishscale",
+    "album_title": "Fishscale",
+    "artist": "Ghostface Killah",
     "release_year": "2006",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Chance the Rapper",
-    "artist": "Acid Rap",
+    "album_title": "Acid Rap",
+    "artist": "Chance the Rapper",
     "release_year": "2013",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Kanye West",
-    "artist": "Graduation",
+    "album_title": "Graduation",
+    "artist": "Kanye West",
     "release_year": "2007",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "De La Soul",
-    "artist": "De La Soul Is Dead",
+    "album_title": "De La Soul Is Dead",
+    "artist": "De La Soul",
     "release_year": "1991",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Janet Jackson",
-    "artist": "The Velvet Rope",
-    "release_year": "1997",
-    "verified_genre": "R&B / Hip-Hop"
-  },
-  {
-    "album_title": "The Notorious B.I.G.",
-    "artist": "Life After Death",
+    "album_title": "Life After Death",
+    "artist": "The Notorious B.I.G.",
     "release_year": "1997",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Danger Mouse",
-    "artist": "The Grey Album",
-    "release_year": "2004",
-    "verified_genre": "Hip-Hop (Mashup)"
-  },
-  {
-    "album_title": "Jay-Z",
-    "artist": "Watch the Throne",
+    "album_title": "Watch the Throne",
+    "artist": "Jay-Z",
     "release_year": "2011",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Public Enemy",
-    "artist": "Yo! Bum Rush the Show",
+    "album_title": "Yo! Bum Rush the Show",
+    "artist": "Public Enemy",
     "release_year": "1987",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Solange",
-    "artist": "When I Get Home",
-    "release_year": "2019",
-    "verified_genre": "Neo-Soul / R&B"
-  },
-  {
-    "album_title": "Chance the Rapper",
-    "artist": "Coloring Book",
+    "album_title": "Coloring Book",
+    "artist": "Chance the Rapper",
     "release_year": "2016",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "N*E*R*D",
-    "artist": "In Search of...",
+    "album_title": "In Search of...",
+    "artist": "N*E*R*D",
     "release_year": "2002",
     "verified_genre": "Hip-Hop / Neo-Soul"
   },
   {
-    "album_title": "Gil Scott-Heron",
-    "artist": "Pieces of a Man",
-    "release_year": "1971",
-    "verified_genre": "Soul / Spoken Word"
-  },
-  {
-    "album_title": "Noname",
-    "artist": "Room 25",
+    "album_title": "Room 25",
+    "artist": "Noname",
     "release_year": "2018",
     "verified_genre": "Hip-Hop / Neo-Soul"
   },
   {
-    "album_title": "Danny Brown",
-    "artist": "Atrocity Exhibition",
+    "album_title": "Atrocity Exhibition",
+    "artist": "Danny Brown",
     "release_year": "2016",
     "verified_genre": "Hip-Hop (Experimental)"
   },
   {
-    "album_title": "Arrested Development",
-    "artist": "3 Years, 5 Months and 2 Days in the Life of...",
+    "album_title": "3 Years, 5 Months and 2 Days in the Life of...",
+    "artist": "Arrested Development",
     "release_year": "1992",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Dr. Dre",
-    "artist": "2001",
+    "album_title": "2001",
+    "artist": "Dr. Dre",
     "release_year": "1999",
     "verified_genre": "Hip-Hop (G-Funk)"
   },
   {
-    "album_title": "Mobb Deep",
-    "artist": "The Infamous...",
+    "album_title": "The Infamous...",
+    "artist": "Mobb Deep",
     "release_year": "1995",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "The Roots",
-    "artist": "Phrenology",
+    "album_title": "Phrenology",
+    "artist": "The Roots",
     "release_year": "2002",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Erykah Badu",
-    "artist": "New Amerykah Part One (4th World War)",
-    "release_year": "2008",
-    "verified_genre": "Neo-Soul / Hip-Hop"
-  },
-  {
-    "album_title": "Future",
-    "artist": "DS2",
+    "album_title": "DS2",
+    "artist": "Future",
     "release_year": "2015",
     "verified_genre": "Hip-Hop (Trap)"
   },
   {
-    "album_title": "Kanye West",
-    "artist": "The Life of Pablo",
+    "album_title": "The Life of Pablo",
+    "artist": "Kanye West",
     "release_year": "2016",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "LL Cool J",
-    "artist": "Radio",
+    "album_title": "Radio",
+    "artist": "LL Cool J",
     "release_year": "1985",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Little Simz",
-    "artist": "Grey Area",
+    "album_title": "Grey Area",
+    "artist": "Little Simz",
     "release_year": "2019",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Mary J. Blige",
-    "artist": "My Life",
-    "release_year": "1994",
-    "verified_genre": "R&B / Hip-Hop"
-  },
-  {
-    "album_title": "Eminem",
-    "artist": "The Eminem Show",
+    "album_title": "The Eminem Show",
+    "artist": "Eminem",
     "release_year": "2002",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Frank Ocean",
-    "artist": "Nostalgia, Ultra",
-    "release_year": "2011",
-    "verified_genre": "R&B / Neo-Soul"
-  },
-  {
-    "album_title": "Missy Elliott",
-    "artist": "Under Construction",
+    "album_title": "Under Construction",
+    "artist": "Missy Elliott",
     "release_year": "2002",
     "verified_genre": "Hip-Hop / R&B"
   },
   {
-    "album_title": "Girl Talk",
-    "artist": "Night Ripper",
-    "release_year": "2006",
-    "verified_genre": "Mashup / Electronic"
-  },
-  {
-    "album_title": "Slick Rick",
-    "artist": "The Great Adventures of Slick Rick",
+    "album_title": "The Great Adventures of Slick Rick",
+    "artist": "Slick Rick",
     "release_year": "1988",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Mos Def",
-    "artist": "The Ecstatic",
+    "album_title": "The Ecstatic",
+    "artist": "Mos Def",
     "release_year": "2009",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "The Disposable Heroes of Hiphoprisy",
-    "artist": "Hypocrisy Is the Greatest Luxury",
+    "album_title": "Hypocrisy Is the Greatest Luxury",
+    "artist": "The Disposable Heroes of Hiphoprisy",
     "release_year": "1992",
     "verified_genre": "Hip-Hop (Conscious)"
   },
   {
-    "album_title": "Lil Wayne",
-    "artist": "Tha Carter",
+    "album_title": "Tha Carter",
+    "artist": "Lil Wayne",
     "release_year": "2004",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Ice Cube",
-    "artist": "AmeriKKKas Most Wanted",
+    "album_title": "AmeriKKKas Most Wanted",
+    "artist": "Ice Cube",
     "release_year": "1990",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Ice Cube",
-    "artist": "Death Certificate",
+    "album_title": "Death Certificate",
+    "artist": "Ice Cube",
     "release_year": "1991",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Common",
-    "artist": "Like Water for Chocolate",
+    "album_title": "Like Water for Chocolate",
+    "artist": "Common",
     "release_year": "2000",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Killer Mike",
-    "artist": "R.A.P. Music",
+    "album_title": "R.A.P. Music",
+    "artist": "Killer Mike",
     "release_year": "2012",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "The Pharcyde",
-    "artist": "Bizarre Ride II The Pharcyde",
+    "album_title": "Bizarre Ride II The Pharcyde",
+    "artist": "The Pharcyde",
     "release_year": "1992",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Jamila Woods",
-    "artist": "LEGACY! LEGACY!",
-    "release_year": "2019",
-    "verified_genre": "R&B / Neo-Soul"
-  },
-  {
-    "album_title": "Jay-Z",
-    "artist": "Reasonable Doubt",
+    "album_title": "Reasonable Doubt",
+    "artist": "Jay-Z",
     "release_year": "1996",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Run the Jewels",
-    "artist": "Run the Jewels 2",
+    "album_title": "Run the Jewels 2",
+    "artist": "Run the Jewels",
     "release_year": "2014",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Eminem",
-    "artist": "The Slim Shady LP",
+    "album_title": "The Slim Shady LP",
+    "artist": "Eminem",
     "release_year": "1999",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Beastie Boys",
-    "artist": "Ill Communication",
+    "album_title": "Ill Communication",
+    "artist": "Beastie Boys",
     "release_year": "1994",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Cypress Hill",
-    "artist": "Black Sunday",
+    "album_title": "Black Sunday",
+    "artist": "Cypress Hill",
     "release_year": "1993",
     "verified_genre": "Hip-Hop"
   },
@@ -1122,122 +936,104 @@
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Public Enemy",
-    "artist": "Fear of a Black Planet",
+    "album_title": "Fear of a Black Planet",
+    "artist": "Public Enemy",
     "release_year": "1990",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "The Notorious B.I.G.",
-    "artist": "Ready to Die",
+    "album_title": "Ready to Die",
+    "artist": "The Notorious B.I.G.",
     "release_year": "1994",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Eminem",
-    "artist": "The Marshall Mathers LP",
+    "album_title": "The Marshall Mathers LP",
+    "artist": "Eminem",
     "release_year": "2000",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Run-D.M.C.",
-    "artist": "Raising Hell",
+    "album_title": "Raising Hell",
+    "artist": "Run-D.M.C.",
     "release_year": "1986",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "OutKast",
-    "artist": "Aquemini",
+    "album_title": "Aquemini",
+    "artist": "OutKast",
     "release_year": "1998",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Madvillain",
-    "artist": "Madvillainy",
+    "album_title": "Madvillainy",
+    "artist": "Madvillain",
     "release_year": "2004",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "M.I.A.",
-    "artist": "Kala",
-    "release_year": "2007",
-    "verified_genre": "Electronic / Hip-Hop"
-  },
-  {
-    "album_title": "Kanye West",
-    "artist": "The College Dropout",
+    "album_title": "The College Dropout",
+    "artist": "Kanye West",
     "release_year": "2004",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Jay-Z",
-    "artist": "The Black Album",
+    "album_title": "The Black Album",
+    "artist": "Jay-Z",
     "release_year": "2003",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "GZA/Genius",
-    "artist": "Liquid Swords",
+    "album_title": "Liquid Swords",
+    "artist": "GZA/Genius",
     "release_year": "1995",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "D'Angelo",
-    "artist": "Brown Sugar",
-    "release_year": "1995",
-    "verified_genre": "Neo-Soul / R&B"
-  },
-  {
-    "album_title": "The Roots",
-    "artist": "Things Fall Apart",
+    "album_title": "Things Fall Apart",
+    "artist": "The Roots",
     "release_year": "1999",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "A Tribe Called Quest",
-    "artist": "Midnight Marauders",
+    "album_title": "Midnight Marauders",
+    "artist": "A Tribe Called Quest",
     "release_year": "1993",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Pusha T",
-    "artist": "Daytona",
+    "album_title": "Daytona",
+    "artist": "Pusha T",
     "release_year": "2018",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "2Pac",
-    "artist": "All Eyez on Me",
-    "release_year": "1996",
-    "verified_genre": "Hip-Hop (Gangsta Rap)"
-  },
-  {
-    "album_title": "Missy Elliott",
-    "artist": "Miss E... So Addictive",
+    "album_title": "Miss E... So Addictive",
+    "artist": "Missy Elliott",
     "release_year": "2001",
     "verified_genre": "Hip-Hop / R&B"
   },
   {
-    "album_title": "Boogie Down Productions",
-    "artist": "Criminal Minded",
+    "album_title": "Criminal Minded",
+    "artist": "Boogie Down Productions",
     "release_year": "1987",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Ghostface Killah",
-    "artist": "Supreme Clientele",
+    "album_title": "Supreme Clientele",
+    "artist": "Ghostface Killah",
     "release_year": "2000",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Raekwon",
-    "artist": "Only Built 4 Cuban Linx...",
+    "album_title": "Only Built 4 Cuban Linx...",
+    "artist": "Raekwon",
     "release_year": "1995",
     "verified_genre": "Hip-Hop"
   },
   {
-    "album_title": "Vince Staples",
-    "artist": "Summertime '06",
+    "album_title": "Summertime '06",
+    "artist": "Vince Staples",
     "release_year": "2015",
     "verified_genre": "Hip-Hop"
   }

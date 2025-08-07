@@ -12,7 +12,6 @@ export const AlbumSchema = z.object({
   release_date: z.string().optional(),
   genre_tags: z.array(z.string()),
   popularity_score: z.number().min(0).max(100),
-  lyrical_content_quality: z.number().min(0).max(100),
   critical_score: z.number().min(0).max(100).optional(),
   source_urls: z.array(z.url()),
   processed_status: z.boolean(),
