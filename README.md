@@ -13,4 +13,5 @@ Critic, Review, Popularity, Ranking sources
 - MusicBrainz - has API
 
 FUTURE:
+- [] setup scoring for newly added albums
 - [] Use agent workflow to help aggregate mentions, ratings, reviews from multiple sources to score albums

@@ -14,6 +14,8 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as bars from "../bars.js";
+import type * as db from "../db.js";
+import type * as spotify from "../spotify.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -25,6 +27,8 @@ import type * as bars from "../bars.js";
  */
 declare const fullApi: ApiFromModules<{
   bars: typeof bars;
+  db: typeof db;
+  spotify: typeof spotify;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

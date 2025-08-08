@@ -11,6 +11,9 @@
     "jsx": "react-jsx",
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
+    "paths": {
+      "@/*": ["../src/*"]
+    },
 
     /* These compiler options are required by Convex */
     "target": "ESNext",
@@ -20,6 +23,6 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["./**/*"],
+  "include": ["./**/*", "../src/**/*"],
   "exclude": ["./_generated"]
 }

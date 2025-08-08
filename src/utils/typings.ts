@@ -5,16 +5,26 @@ export const GenreSchema = z.object({
   name: z.string(),
 });
 
+export const Metadata = z.looseObject({
+  external_ids: z.object({
+    spotify: z.string().optional(),
+    apple_music: z.string().optional(),
+    youtube_music: z.string().optional(),
+  }),
+});
+
 export const AlbumSchema = z.object({
   id: z.string(),
   title: z.string(),
   artist_id: z.string(),
+  spotify_id: z.string().optional(),
   release_date: z.string().optional(),
   genre_tags: z.array(z.string()),
-  popularity_score: z.number().min(0).max(100),
+  popularity_score: z.number().min(0).max(100).optional(),
   critical_score: z.number().min(0).max(100).optional(),
   source_urls: z.array(z.url()),
   processed_status: z.boolean(),
+  metadata: Metadata.optional(),
   created_at: z.string(),
 });
 
@@ -25,22 +35,24 @@ export const SongSchema = z.object({
   artist_id: z.string(),
   duration_ms: z.number().positive(),
   explicit_flag: z.boolean(),
+  duration: z.number().positive(),
   lyrics: z.string(),
   genre_tags: z.array(z.string()),
-  popularity_score: z.number().min(0).max(100),
+  popularity_score: z.number().min(0).max(100).optional(),
   audio_urls: z.array(z.url()),
   processed_status: z.boolean(),
+  metadata: Metadata.optional(),
   created_at: z.string(),
 });
 
 export const ArtistSchema = z.object({
   id: z.string(),
   name: z.string(),
-  stage_name: z.string().optional(),
-  verified_status: z.boolean(),
+  spotify_id: z.string().optional(),
   genre_tags: z.array(z.string()),
-  popularity_score: z.number().min(0).max(100),
+  popularity_score: z.number().min(0).max(100).optional(),
   social_links: z.array(z.url()).optional(),
+  metadata: Metadata.optional(),
   created_at: z.string(),
 });
 
