@@ -1,95 +1,61 @@
 import { z } from "zod";
+import type { Id } from "@/../convex/_generated/dataModel";
 
-export const GenreSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-});
-
-export const Metadata = z.looseObject({
-  external_ids: z.object({
-    spotify: z.string().optional(),
-    apple_music: z.string().optional(),
-    youtube_music: z.string().optional(),
-  }),
-});
+export const MetadataSchema = z
+  .object({
+    external_ids: z.object({
+      spotify: z.string().optional(),
+      apple_music: z.string().optional(),
+      youtube_music: z.string().optional(),
+    }),
+    source_urls: z.object({
+      spotify: z.string().optional(),
+    }),
+    audio_urls: z.array(z.string()).optional(),
+  })
+  .catchall(z.any());
 
 export const AlbumSchema = z.object({
-  id: z.string(),
+  _id: z.custom<Id<"album">>(),
   title: z.string(),
-  artist_id: z.string(),
-  spotify_id: z.string().optional(),
-  release_date: z.string().optional(),
+  artist_id: z.custom<Id<"artist">>(),
+  artist_name: z.string(),
+  release_date: z.string(),
   genre_tags: z.array(z.string()),
-  popularity_score: z.number().min(0).max(100).optional(),
-  critical_score: z.number().min(0).max(100).optional(),
-  source_urls: z.array(z.url()),
-  processed_status: z.boolean(),
-  metadata: Metadata.optional(),
-  created_at: z.string(),
+  popularity_score: z.number().optional(),
+  critical_score: z.number().optional(),
+  processed_status: z.boolean().default(false),
+  metadata: MetadataSchema.optional(),
 });
 
 export const SongSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  album_id: z.string(),
-  artist_id: z.string(),
-  duration_ms: z.number().positive(),
+  _id: z.custom<Id<"song">>(),
+  album_id: z.custom<Id<"album">>(),
+  artist_id: z.custom<Id<"artist">>(),
+  album_name: z.string(),
+  artist_name: z.string(),
+  release_date: z.string(),
+  duration_ms: z.number(),
   explicit_flag: z.boolean(),
-  duration: z.number().positive(),
+  duration: z.number(),
   lyrics: z.string(),
   genre_tags: z.array(z.string()),
-  popularity_score: z.number().min(0).max(100).optional(),
-  audio_urls: z.array(z.url()),
-  processed_status: z.boolean(),
-  metadata: Metadata.optional(),
-  created_at: z.string(),
+  popularity_score: z.number().optional(),
+  processed_status: z.boolean().default(false),
+  metadata: MetadataSchema.optional(),
 });
 
 export const ArtistSchema = z.object({
-  id: z.string(),
+  _id: z.custom<Id<"artist">>(),
   name: z.string(),
   spotify_id: z.string().optional(),
   genre_tags: z.array(z.string()),
-  popularity_score: z.number().min(0).max(100).optional(),
-  social_links: z.array(z.url()).optional(),
-  metadata: Metadata.optional(),
-  created_at: z.string(),
-});
-
-export const ProcessedBarSchema = z.object({
-  id: z.string(),
-  song_id: z.string(),
-  lyric_text: z.string(),
-  start_time: z.number().min(0),
-  end_time: z.number().min(0),
-  context_score: z.number().min(0).max(100),
-  sentiment_score: z.number().min(0).max(100).optional(),
-  complexity_score: z.number().min(0).max(100).optional(),
-  audio_url: z.url(),
-  created_at: z.string(),
-});
-
-export const StreamingLinkSchema = z.object({
-  id: z.string(),
-  item_id: z.string(),
-  platform_name: z.enum(["Spotify", "YouTube", "Apple Music", "SoundCloud"]),
-  url: z.url(),
-  created_at: z.string(),
-});
-
-export const NLPProcessingLogSchema = z.object({
-  id: z.string(),
-  song_id: z.string(),
-  processed_bars_count: z.number().min(0),
-  processing_time_ms: z.number().positive(),
-  error_logs: z.array(z.string()).optional(),
-  created_at: z.string(),
+  popularity_score: z.number().optional(),
+  social_links: z.array(z.string()).optional(),
+  processed_status: z.boolean().default(false),
+  metadata: MetadataSchema.optional(),
 });
 
 export type Album = z.infer<typeof AlbumSchema>;
 export type Song = z.infer<typeof SongSchema>;
-export type Genre = z.infer<typeof GenreSchema>;
 export type Artist = z.infer<typeof ArtistSchema>;
-export type Bar = z.infer<typeof ProcessedBarSchema>;
-export type Stream = z.infer<typeof StreamingLinkSchema>;
-export type NLPLog = z.infer<typeof NLPProcessingLogSchema>;

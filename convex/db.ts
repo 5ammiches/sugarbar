@@ -1,32 +1,44 @@
-import { AlbumSchema, ArtistSchema } from "@/utils/typings";
-import { Id } from "./_generated/dataModel";
 import { mutation } from "./_generated/server";
-import { zCustomMutation } from "convex-helpers/server/zod";
-import { zodToConvex } from "convex-helpers/server/zod";
-import { NoOp } from "convex-helpers/server/customFunctions";
-import { logger } from "@/lib/utils";
+import { AlbumSchema, Album } from "@/../src/utils/typings";
 
-const zMutation = zCustomMutation(mutation, NoOp);
+export const addAlbum = mutation({
+  args: {},
+  handler: async (ctx, rawArgs) => {
+    const parsed = AlbumSchema.safeParse(rawArgs);
 
-export const addAlbum = zMutation({
-  args: AlbumSchema,
-  handler: async (ctx, args) => {
-    let existingAlbum: any = null;
-
-    // TODO get or create artist when adding album
-
-    if (args.spotify_id) {
-      existingAlbum = await ctx.db
-        .query("album")
-        .filter((q) => q.eq(q.field("spotify_id"), args.spotify_id))
-        .first();
+    if (!parsed.success) {
+      throw new Error(`Cannot parse album arguments: ${parsed.error}`);
     }
 
-    if (!existingAlbum) {
+    const args: Album = parsed.data;
+    let artistId = args.artist_id;
+
+    const artist = await ctx.db.get(artistId);
+    if (!artist) {
+      if (args.artist_name) {
+        artistId = await ctx.db.insert("artist", {
+          name: args.artist_name,
+          genre_tags: [],
+          processed_status: false,
+          metadata: {},
+        });
+      } else {
+        throw new Error(`Album "${args.title}" does not have an artist`);
+      }
+    }
+
+    let existingAlbum = await ctx.db
+      .query("album")
+      .filter((q) => q.eq(q.field("title"), args.title))
+      .filter((q) => q.eq(q.field("artist_id"), artistId))
+      .first();
+
+    if (!existingAlbum && args.metadata?.external_ids.spotify) {
       existingAlbum = await ctx.db
         .query("album")
-        .filter((q) => q.eq(q.field("title"), args.title))
-        .filter((q) => q.eq(q.field("artist_id"), args.artist_id))
+        .filter((q) =>
+          q.eq(q.field("spotify_id"), args.metadata?.external_ids.spotify)
+        )
         .first();
     }
 
@@ -34,22 +46,11 @@ export const addAlbum = zMutation({
       return existingAlbum._id;
     }
 
-    const album = AlbumSchema.safeParse(args);
-    if (!album.success) {
-      logger.error(
-        `Error parsing album while adding to database: ${album.error}`
-      );
-      throw new Error("Invalid album data");
-    }
-
-    return await ctx.db.insert("album", album);
+    return await ctx.db.insert("album", {
+      ...args,
+      artist_id: artistId,
+    });
   },
 });
 
-export const addArtist = zMutation({
-  args: ArtistSchema,
-  handler: async (ctx, args) => {
-    // TODO
-    return;
-  },
-});
+// TODO handle adding artists and songs

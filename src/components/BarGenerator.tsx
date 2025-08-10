@@ -70,26 +70,6 @@ export function BarGenerator() {
     }
 
     try {
-      try {
-        const metadata = await convex.action(api.metadata.fetchAlbumMetadata, {
-          albumName: "GNX",
-          artist: "Kendrick Lamar",
-        });
-
-        if (!metadata.success) {
-          throw new Error(metadata.message);
-        }
-
-        console.log("Metadata fetched:", metadata.message);
-      } catch (error) {
-        console.error("Failed to fetch metadata:", error);
-        toast({
-          title: "METADATA FETCH ERROR",
-          description:
-            "Failed to fetch album metadata. Continuing with bar generation.",
-        });
-      }
-
       const selectedBar = await convex.action(api.bars.generateRandomBar, {});
       setCurrentBar(selectedBar);
     } catch (error) {
