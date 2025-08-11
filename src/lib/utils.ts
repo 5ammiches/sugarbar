@@ -1,6 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { convexToZodFields } from "convex-helpers/server/zod";
 import { zid } from "convex-helpers/server/zod";
 import type { PropertyValidators } from "convex/values";
 import { ZodRawShape, ZodTypeAny } from "zod";

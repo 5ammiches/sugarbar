@@ -5,9 +5,10 @@ export const MetadataField = v.record(v.string(), v.any());
 
 export const AlbumFields = {
   title: v.string(),
+  title_normalized: v.string(),
   artist_id: v.id("artist"),
   artist_name: v.string(),
-  spotify_id: v.optional(v.string()),
+  artist_name_normalized: v.string(),
   release_date: v.string(),
   genre_tags: v.array(v.string()),
   popularity_score: v.optional(v.number()),
@@ -16,12 +17,15 @@ export const AlbumFields = {
   metadata: v.optional(MetadataField),
 };
 
-export const SongFields = {
+export const TrackFields = {
   title: v.string(),
+  title_normalized: v.string(),
   album_id: v.id("album"),
   artist_id: v.id("artist"),
   album_name: v.string(),
+  album_name_normalized: v.string(),
   artist_name: v.string(),
+  artist_name_normalized: v.string(),
   release_date: v.string(),
   duration_ms: v.number(),
   explicit_flag: v.boolean(),
@@ -35,7 +39,7 @@ export const SongFields = {
 
 export const ArtistFields = {
   name: v.string(),
-  spotify_id: v.optional(v.string()),
+  name_normalized: v.string(),
   genre_tags: v.array(v.string()),
   popularity_score: v.optional(v.number()),
   social_links: v.optional(v.array(v.string())),
@@ -45,6 +49,6 @@ export const ArtistFields = {
 
 export default defineSchema({
   album: defineTable(AlbumFields),
-  song: defineTable(SongFields),
+  track: defineTable(TrackFields),
   artist: defineTable(ArtistFields),
 });

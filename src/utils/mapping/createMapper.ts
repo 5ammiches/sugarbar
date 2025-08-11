@@ -1,4 +1,17 @@
+import { logger } from "@/lib/utils";
 import { z } from "zod";
+
+/*
+normalize name
+*/
+export function normalizeName(name: string) {
+  if (!name || typeof name !== "string") return "";
+  return name
+    .toLowerCase()
+    .normalize("NFKD") // remove accents
+    .replace(/[^\w\s]/g, "") // remove punctuation
+    .trim();
+}
 
 /**
  * Get a value from an object using dot notation
@@ -39,15 +52,19 @@ export type FieldMap<T> = Record<string, string>;
 export function createMapper<T>(
   schema: z.ZodType<T>,
   fieldMap: FieldMap<T>,
-  transforms?: Partial<Record<string, (val: any, raw?: any) => any>>
+  transforms?: Partial<
+    Record<string, (val: any, raw: any, mapped: Partial<T>) => any>
+  >
 ) {
-  return (raw: Record<string, any>): T => {
+  const seen = new Set();
+
+  return (raw: Record<string, any>): T | undefined => {
     const mapped: any = {};
 
     for (const [externalPath, internalPath] of Object.entries(fieldMap)) {
       const rawValue = getValueByPath(raw, externalPath);
       const transformedValue = transforms?.[internalPath]
-        ? transforms[internalPath]!(rawValue, raw)
+        ? transforms[internalPath]!(rawValue, raw, mapped)
         : rawValue;
 
       setValueByPath(mapped, internalPath, transformedValue);
@@ -57,31 +74,22 @@ export function createMapper<T>(
       for (const [internalPath, transformFn] of Object.entries(transforms)) {
         if (typeof transformFn === "function") {
           const existingValue = getValueByPath(mapped, internalPath);
-          const newValue = transformFn(existingValue, raw);
-
-          if (Array.isArray(existingValue) && Array.isArray(newValue)) {
-            setValueByPath(mapped, internalPath, [
-              ...existingValue,
-              ...newValue,
-            ]);
-          } else if (
-            existingValue &&
-            typeof existingValue === "object" &&
-            typeof newValue === "object" &&
-            !Array.isArray(existingValue) &&
-            !Array.isArray(newValue)
-          ) {
-            setValueByPath(mapped, internalPath, {
-              ...existingValue,
-              ...newValue,
-            });
-          } else {
-            setValueByPath(mapped, internalPath, newValue);
-          }
+          const newValue = transformFn(existingValue, raw, mapped);
+          setValueByPath(mapped, internalPath, newValue);
         }
       }
     }
 
-    return schema.parse(mapped);
+    try {
+      return schema.parse(mapped);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const key = JSON.stringify(err.issues);
+        if (!seen.has(key)) {
+          seen.add(key);
+          logger.error("Schema parsing failed", err);
+        }
+      }
+    }
   };
 }

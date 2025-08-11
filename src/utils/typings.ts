@@ -3,23 +3,24 @@ import type { Id } from "@/../convex/_generated/dataModel";
 
 export const MetadataSchema = z
   .object({
-    external_ids: z.object({
+    ids: z.object({
       spotify: z.string().optional(),
-      apple_music: z.string().optional(),
-      youtube_music: z.string().optional(),
+      spotify_artist: z.string().optional(),
     }),
     source_urls: z.object({
-      spotify: z.string().optional(),
+      spotify: z.url().optional(),
     }),
-    audio_urls: z.array(z.string()).optional(),
+    audio_urls: z.array(z.url()).optional(),
   })
   .catchall(z.any());
 
 export const AlbumSchema = z.object({
   _id: z.custom<Id<"album">>(),
-  title: z.string(),
   artist_id: z.custom<Id<"artist">>(),
+  title: z.string(),
+  title_normalized: z.string(),
   artist_name: z.string(),
+  artist_name_normalized: z.string(),
   release_date: z.string(),
   genre_tags: z.array(z.string()),
   popularity_score: z.number().optional(),
@@ -28,17 +29,20 @@ export const AlbumSchema = z.object({
   metadata: MetadataSchema.optional(),
 });
 
-export const SongSchema = z.object({
-  _id: z.custom<Id<"song">>(),
+export const TrackSchema = z.object({
+  _id: z.custom<Id<"track">>(),
   album_id: z.custom<Id<"album">>(),
   artist_id: z.custom<Id<"artist">>(),
+  title: z.string(),
+  title_normalized: z.string(),
   album_name: z.string(),
+  album_name_normalized: z.string(),
   artist_name: z.string(),
+  artist_name_normalized: z.string(),
   release_date: z.string(),
   duration_ms: z.number(),
   explicit_flag: z.boolean(),
-  duration: z.number(),
-  lyrics: z.string(),
+  lyrics: z.string().optional(),
   genre_tags: z.array(z.string()),
   popularity_score: z.number().optional(),
   processed_status: z.boolean().default(false),
@@ -48,14 +52,14 @@ export const SongSchema = z.object({
 export const ArtistSchema = z.object({
   _id: z.custom<Id<"artist">>(),
   name: z.string(),
-  spotify_id: z.string().optional(),
+  name_normalized: z.string(),
   genre_tags: z.array(z.string()),
   popularity_score: z.number().optional(),
-  social_links: z.array(z.string()).optional(),
+  social_links: z.array(z.url()).optional(),
   processed_status: z.boolean().default(false),
   metadata: MetadataSchema.optional(),
 });
 
 export type Album = z.infer<typeof AlbumSchema>;
-export type Song = z.infer<typeof SongSchema>;
+export type Track = z.infer<typeof TrackSchema>;
 export type Artist = z.infer<typeof ArtistSchema>;

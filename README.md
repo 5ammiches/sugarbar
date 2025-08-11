@@ -1,6 +1,8 @@
 TODO
-- [] process initial album data - lyrics, metadata, songs, artists, genres, cover art, reviews
-- [] score albums based on aggregated scores from multiple review sites (popularity, critic scores)
+- [x] process data from Spotify API - albums, artists, and tracks
+= [] copmlete setup for music source adapter in src/utils/music - Spotify
+- [] code lyric fetching process for each track from multiple sources (use primary source then fallbacks) - find 2-3 APIs to get lyrics from
+- [] setup pipeline to insert albums, artists, and tracks to DB from Spotify
 - [] set up NLP pipeline for lyrics analysis on tracks
 - [] create a pipeline to Fetch Albums based scoring data, critical claim, popularity
 - [] For each album, get songs, metadata, lyrics, etc
