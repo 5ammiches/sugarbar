@@ -1,4 +1,5 @@
 import { logger } from "@/lib/utils";
+import { MapperFn } from "../music/base";
 import { z } from "zod";
 
 /*
@@ -55,10 +56,10 @@ export function createMapper<T>(
   transforms?: Partial<
     Record<string, (val: any, raw: any, mapped: Partial<T>) => any>
   >
-) {
+): MapperFn<T> {
   const seen = new Set();
 
-  return (raw: Record<string, any>): T | undefined => {
+  return (raw: Record<string, any>) => {
     const mapped: any = {};
 
     for (const [externalPath, internalPath] of Object.entries(fieldMap)) {

@@ -14,6 +14,7 @@ export function ClerkAuthProvider({ children }: ClerkAuthProviderProps) {
 
   return (
     <ClerkProvider
+      // TODO update when setting up Auth
       publishableKey={publishableKey}
       // signInFallbackRedirectUrl="/admin"
       // signUpFallbackRedirectUrl="/admin"
