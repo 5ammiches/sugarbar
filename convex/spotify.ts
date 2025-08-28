@@ -1,6 +1,7 @@
 import { internalAction } from "./_generated/server";
-import { SpotifyProvider } from "@/utils/music/spotify";
+import { SpotifyProvider } from "@/utils/providers/music/spotify";
 
+// TODO structure a way to get albums + tracks + artist + lyrics + metadata + genre_tags + audio
 const spot = new SpotifyProvider();
 
 export const GetAlbumInfo = internalAction({

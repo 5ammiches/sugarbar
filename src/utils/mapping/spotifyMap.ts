@@ -8,6 +8,7 @@ import {
   ArtistSchema,
 } from "@/utils/typings";
 
+// TODO: Spotify does not provide genre tags
 export const mapSpotifyAlbum = createMapper<Album>(
   AlbumSchema,
   {

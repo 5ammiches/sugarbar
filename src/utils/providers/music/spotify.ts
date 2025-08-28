@@ -4,12 +4,11 @@ import {
   mapSpotifyAlbum,
   mapSpotifyArtist,
   mapSpotifyTrack,
-} from "../mapping/spotifyMap";
-import { Album, Track, Artist } from "../typings";
-import { MusicProvider } from "./base";
-import { MapperFn } from "./base";
+} from "@/utils/mapping/spotifyMap";
+import { Album, Track, Artist } from "@/utils/typings";
+import { MusicProvider } from "@/utils/providers/base";
+import { MapperFn } from "@/utils/providers/base";
 
-// TODO add function for retreiving track by its ID (getTrackById)
 export class SpotifyProvider implements MusicProvider {
   private client: SpotifyApi;
 
@@ -156,7 +155,6 @@ export class SpotifyProvider implements MusicProvider {
     const albumName = album.name;
     const result = album.tracks.items;
 
-    // TODO get lyrics for tracks from notable sources
     const tracks: Track[] = [];
 
     for (const item of result) {
@@ -216,5 +214,45 @@ export class SpotifyProvider implements MusicProvider {
     }
 
     return mappedArtist;
+  }
+
+  async getTrackById(id: string) {
+    let track;
+    try {
+      track = await this.client.tracks.get(id);
+    } catch (err) {
+      if (err instanceof Error) {
+        logger.error("Spotify: Error fetching track from Spotify", {
+          trackId: id,
+          error: err.message,
+        });
+        if (
+          err.message.includes("404") ||
+          err.message.includes("Resource not found")
+        ) {
+          throw new Error(`Spotify: Track not found for ID: ${id}`);
+        }
+        throw new Error(`Spotify: Error fetching track: ${err.message}`);
+      }
+      throw new Error("Spotify: Error fetching track: Unknown error");
+    }
+
+    if (!track) {
+      logger.error(`Spotify: No track found from Spotify for ID : ${id}`, {
+        artistId: id,
+      });
+      throw new Error(`Spotify: No track found from Spotify for ID: ${id}`);
+    }
+
+    const mappedTrack = this.mapTrack(track);
+
+    if (!mappedTrack) {
+      logger.error("Spotify: Failed to map track information", {
+        artistId: id,
+      });
+      throw new Error(`spotify: failed to map track information.`);
+    }
+
+    return mappedTrack;
   }
 }
