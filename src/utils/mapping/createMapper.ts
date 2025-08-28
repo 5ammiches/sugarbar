@@ -1,5 +1,5 @@
 import { logger } from "@/lib/utils";
-import { MapperFn } from "../music/base";
+import { MapperFn } from "../providers/base";
 import { z } from "zod";
 
 /*
