@@ -8,7 +8,9 @@ export const Route = createFileRoute("/")({
 function Home() {
   return (
     <div className="min-h-screen">
-      <BarGenerator />
+      <div className="flex justify-center items-center h-full">
+        UI In Progress 😊
+      </div>
     </div>
   );
 }
