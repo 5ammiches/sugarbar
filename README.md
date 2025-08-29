@@ -127,10 +127,36 @@ pnpm run dev
 - With SPOTIFY_CLIENT_ID/SECRET set in your root .env, you can trigger the Convex functions that fetch artists/albums/tracks metadata (see convex/spotify.ts). Run the app with `pnpm run dev` and invoke the functions via your development hooks or temporary routes.
 
 Project structure (key parts)
-- convex/            Convex functions (e.g., spotify.ts), schema, config
-- lyrics-service/    FastAPI lyrics microservice (run_server.py)
-- src/               TanStack Start app (UI WIP)
-- public/            Static assets
+```
+sugarbar/
+├─ convex/                  # Convex backend
+│  ├─ _generated/
+│  ├─ schema.ts
+│  ├─ db.ts
+│  ├─ bars.ts
+│  ├─ spotify.ts            # Spotify metadata functions
+│  ├─ auth.config.ts
+│  └─ tsconfig.json
+├─ lyrics-service/       # FastAPI lyrics microservice
+│   ├─ app/
+│   ├─ run_server.py
+│   ├─ pyproject.toml
+|   ├─.env
+│   └─ README.md
+├─ src/                     # TanStack Start app (UI WIP)
+│  ├─ components/
+│  ├─ hooks/
+│  ├─ lib/
+│  ├─ routes/
+│  ├─ styles/
+│  ├─ utils/
+│  ├─ routeTree.gen.ts
+│  └─ router.tsx
+├─ public/                  # Static assets
+├─ package.json
+├─ .env(.local)
+└─ README.md
+```
 
 What’s not in this preview
 - Audio playback and alignment are not wired up yet (no audio pipeline in the app).
