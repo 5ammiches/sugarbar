@@ -1,3 +1,3 @@
-[![SugarBar logo][image-banner]](#)
-
-[image-banner]: ./public/logo-readme.png
+<a href="#">
+  <img src="./public/logo-readme.png" alt="SugarBar logo" style="max-width: 220px; width: 100%; height: auto;" />
+</a>
