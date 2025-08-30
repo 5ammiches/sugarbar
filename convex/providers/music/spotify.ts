@@ -12,10 +12,7 @@ import { MapperFn } from "@/utils/providers/base";
 export class SpotifyProvider implements MusicProvider {
   private client: SpotifyApi;
 
-  constructor(
-    private clientId = process.env.SPOTIFY_CLIENT_ID!,
-    private clientSecret = process.env.SPOTIFY_CLIENT_SECRET!
-  ) {
+  constructor(private clientId?: string, private clientSecret?: string) {
     if (!this.clientId || !this.clientSecret) {
       throw new Error("Spotify credentials are missing");
     }
@@ -168,7 +165,7 @@ export class SpotifyProvider implements MusicProvider {
       }
     }
 
-    if (!tracks.length) {
+    if (!tracks || tracks.length === 0) {
       throw new Error(`Spotify: No tracks found for album ID: ${id}`);
     }
 

@@ -139,15 +139,15 @@ class Musixmatch(LyricsBaseProvider):
             async with AsyncWebCrawler(config=browser_config) as crawler:
                 res = await crawler.arun(search_query, config=crawler_config)
 
-                if not res.success:
-                    print("Debug HTML snippet:\n", res.cleaned_html[:1000])
+                if not res.success: # type: ignore
+                    print("Debug HTML snippet:\n", res.cleaned_html[:1000]) # type: ignore
                     raise ValueError(
-                        f"Musixmatch searching failed: {res.error_message}"
+                        f"Musixmatch searching failed: {res.error_message}" # type: ignore
                     )
 
-                data = json.loads(res.extracted_content)
+                data = json.loads(res.extracted_content) # type: ignore
                 if not data:
-                    print(f"Results from scraper: {res.extracted_content}")
+                    print(f"Results from scraper: {res.extracted_content}") # type: ignore
                     raise ValueError("No search results found")
 
                 raw = data[0]
@@ -156,7 +156,7 @@ class Musixmatch(LyricsBaseProvider):
                 # query_artist = self.normalize_text(artist)
                 best_results = []
                 if raw.get("best_results"):
-                    for track in raw["best_results"]:
+                    for track in raw.get("best_results"):
                         track["title"] = self.normalize_text(track.get("title", ""))
                         track["artist"] = self.normalize_text(track.get("artist", ""))
 
@@ -229,12 +229,12 @@ class Musixmatch(LyricsBaseProvider):
             async with AsyncWebCrawler() as crawler:
                 result = await crawler.arun(url, config=config)
 
-            if not result.success:
-                print("Scraper Failed:", result.error_message)
-                print("Debug HTML snippet:\n", result.cleaned_html[:1000])
-                return None, result.error_message
+            if not result.success: # type: ignore
+                print("Scraper Failed:", result.error_message) # type: ignore
+                print("Debug HTML snippet:\n", result.cleaned_html[:1000]) # type: ignore
+                return None, result.error_message # type: ignore
 
-            md = result.markdown
+            md = result.markdown # type: ignore
             return md, None
         except Exception as e:
             return None, str(e)

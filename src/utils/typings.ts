@@ -60,6 +60,18 @@ export const ArtistSchema = z.object({
   metadata: MetadataSchema.optional(),
 });
 
+export const LyricSource = z.enum(["genius", "musixmatch"]);
+
+export const LyricResponse = z.object({
+  provider: LyricSource,
+  title: z.string(),
+  artist: z.string(),
+  lyrics: z.string().optional(),
+  url: z.url().optional(),
+});
+
+export type LyricSource = z.infer<typeof LyricSource>;
+export type Lyric = z.infer<typeof LyricResponse>;
 export type Album = z.infer<typeof AlbumSchema>;
 export type Track = z.infer<typeof TrackSchema>;
 export type Artist = z.infer<typeof ArtistSchema>;

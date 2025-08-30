@@ -24,4 +24,4 @@ export class Logger {
   }
 }
 
-export const logger = new Logger("DailyBar");
+export const logger = new Logger("SugarBar");

@@ -1,5 +1,5 @@
 import { logger } from "@/lib/utils";
-import { MapperFn } from "../providers/base";
+import { MapperFn } from "@/utils/providers/base";
 import { z } from "zod";
 
 /*

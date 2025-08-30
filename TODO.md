@@ -5,7 +5,7 @@ TODO
 - [x] Read Crawl4AI Docs ( start at Deep Crawling 4. Filtering Content )
 - [x] setup python service to use Crawl4AI to provide lyrics from sources (Musixmatch as a fallback) - Genius and Musixmatch
 - [x] setup Musixmatch lyrics provider
-- [ ] start project documentation - Document how to set up project and simple structure of the project so far
+- [x] start project documentation - Document how to set up project and simple structure of the project so far
 - [ ] Make pipline for Albums -> Tracks -> get metadata + lyrics + audio ( After, find way to get genre tags + Think about how to process lyrics with NLP + How to get the audio snippets)
 - [ ] code solution to get genres for albums and individual tracks - this will be apart of genre_tages in typings.ts
 - [ ] get audio for each track
