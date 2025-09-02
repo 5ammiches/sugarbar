@@ -95,12 +95,10 @@ pnpm install
 Lyrics service (FastAPI + uv):
 
 ```bash
-cd services/lyrics-service
+cd lyrics-service
 uv venv
 source .venv/bin/activate    # Windows: .venv\Scripts\activate
 uv pip install -e .
-# If you keep a requirements file, also:
-# uv pip install -r requirements.txt
 ```
 
 4. Run services in development
