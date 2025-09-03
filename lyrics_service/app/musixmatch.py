@@ -13,6 +13,7 @@ from crawl4ai import (
 )
 
 from app.base import LyricsBaseProvider
+from app.logger import NoResultsError, ProviderError
 
 
 # TODO maybe refactor with an initialized AcynWebCrawler since it is used in two methods here
@@ -26,8 +27,7 @@ class Musixmatch(LyricsBaseProvider):
         self, search_result: Dict[str, list]
     ) -> Optional[Dict[str, Any]]:
         if not search_result.get("best_result") and not search_result.get("tracks"):
-            print("No results found")
-            return None
+            raise NoResultsError("No results found")
 
         result = search_result.get("best_result", {})
         if result:
@@ -35,7 +35,7 @@ class Musixmatch(LyricsBaseProvider):
 
         result = search_result.get("tracks", {})
         if result is None:
-            print("No tracks found")
+            raise NoResultsError("No results found")
             return None
 
         return result[0]
@@ -139,16 +139,16 @@ class Musixmatch(LyricsBaseProvider):
             async with AsyncWebCrawler(config=browser_config) as crawler:
                 res = await crawler.arun(search_query, config=crawler_config)
 
-                if not res.success: # type: ignore
-                    print("Debug HTML snippet:\n", res.cleaned_html[:1000]) # type: ignore
+                if not res.success:  # type: ignore
+                    print("Debug HTML snippet:\n", res.cleaned_html[:1000])  # type: ignore
                     raise ValueError(
-                        f"Musixmatch searching failed: {res.error_message}" # type: ignore
+                        f"Musixmatch searching failed: {res.error_message}"  # type: ignore
                     )
 
-                data = json.loads(res.extracted_content) # type: ignore
+                data = json.loads(res.extracted_content)  # type: ignore
                 if not data:
-                    print(f"Results from scraper: {res.extracted_content}") # type: ignore
-                    raise ValueError("No search results found")
+                    print(f"Results from scraper: {res.extracted_content}")  # type: ignore
+                    raise NoResultsError("No search results found")
 
                 raw = data[0]
 
@@ -185,23 +185,24 @@ class Musixmatch(LyricsBaseProvider):
                 return {"best_result": best_results, "tracks": tracks}
 
         except Exception as e:
-            print(f"Error making search query: {str(e)}")
-            raise
+            raise ProviderError(f"Error making search query: {str(e)}")
 
     async def get_lyric_url(self, title: str, artist: str) -> Optional[str]:
         try:
             res = await self._search(title, artist)
             if not res:
-                raise ValueError("No search results found from crawler")
+                raise NoResultsError("No results found")
 
             top_result = self._get_top_result(res)
 
             if not top_result or not top_result["url"]:
-                raise ValueError("No URL found for top result")
+                raise NoResultsError("No URL found for top result")
 
             return top_result["url"]
+        except (NoResultsError, ProviderError):
+            raise
         except Exception as e:
-            raise ValueError(f"Error fetching lyrics: {str(e)}")
+            raise ProviderError(f"Musixmatch client error: {str(e)}") from e
 
     async def scrape_lyrics(self, url: str) -> Tuple[Optional[str], Optional[str]]:
         prune_filer = PruningContentFilter(
@@ -229,12 +230,10 @@ class Musixmatch(LyricsBaseProvider):
             async with AsyncWebCrawler() as crawler:
                 result = await crawler.arun(url, config=config)
 
-            if not result.success: # type: ignore
-                print("Scraper Failed:", result.error_message) # type: ignore
-                print("Debug HTML snippet:\n", result.cleaned_html[:1000]) # type: ignore
-                return None, result.error_message # type: ignore
+            if not result.success:  # type: ignore
+                return None, str(result.error_message)  # type: ignore
 
-            md = result.markdown # type: ignore
+            md = result.markdown  # type: ignore
             return md, None
         except Exception as e:
             return None, str(e)

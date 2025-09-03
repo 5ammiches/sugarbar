@@ -1,23 +1,38 @@
 import { PythonLyricProvider } from "./providers/lyrics/python_lyrics";
+import { v } from "convex/values";
 import { action } from "./_generated/server";
+import { LYRIC_SOURCES } from "@/lib/constants";
 
-export const GetTrackLyrics = action({
-  args: {},
+function makeLyrics(endpoint?: string) {
+  endpoint = endpoint ?? process.env.PYTHON_LYRICS_URL;
+  return new PythonLyricProvider(endpoint);
+}
+
+const vLyricsSource = v.union(...LYRIC_SOURCES.map((s) => v.literal(s)));
+const normalize = (s: string) =>
+  s
+    .normalize("NFKD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim();
+
+// TODO: possibly update the client and this function for tracks that have multiple artists
+export const getLyricsByTrack = action({
+  args: {
+    source: vLyricsSource,
+    title: v.string(),
+    artist: v.string(),
+  },
   handler: async (ctx, args) => {
-    const baseUrl = process.env.PYTHON_LYRICS_URL;
+    const client = makeLyrics();
+    const title = normalize(args.title);
+    const artist = normalize(args.artist);
 
-    const lyricProvider = new PythonLyricProvider(baseUrl);
+    const lyrics = await client.getLyricsByTrack(args.source, title, artist);
 
-    const lyrics = await lyricProvider.getLyricsByTrack(
-      "genius",
-      "maad city",
-      "kendrick lamar"
-    );
-
-    if (!lyrics) {
+    if (!lyrics || lyrics.lyrics?.length === 0) {
       throw new Error("Lyrics not found");
     }
 
-    return lyrics;
+    return { lyrics: lyrics };
   },
 });

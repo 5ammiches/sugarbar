@@ -1,3 +1,4 @@
+# app/genius.py
 from typing import Any, Dict, Optional, Tuple
 
 import httpx
@@ -10,9 +11,9 @@ from crawl4ai import (
 )
 
 from app.base import LyricsBaseProvider
+from app.logger import NoResultsError, ProviderError  # <-- use domain errors
 
 
-# TODO implement retries for failed api calls
 class Genius(LyricsBaseProvider):
     BASE_URL = "https://api.genius.com"
 
@@ -40,81 +41,84 @@ class Genius(LyricsBaseProvider):
             resp = await self.client.get(url=path, params=params, timeout=15)
             resp.raise_for_status()
             data = resp.json()
+
+            # Genius sometimes returns 200 with an error in "meta"
             if "meta" in data and data["meta"].get("status", 200) >= 400:
-                raise httpx.HTTPError(f"Genius API Error in response: {data['meta']}")
+                raise ProviderError(f"Genius API error in response: {data['meta']}")
 
             if not data:
-                raise httpx.HTTPError(
-                    f"Empty response body from request for: {resp.url}"
-                )
+                raise ProviderError(f"Empty response body for: {resp.url}")
 
             payload = data.get("response", data)
             if not payload:
-                raise httpx.HTTPError("No 'response' data in payload")
+                raise ProviderError("No 'response' data in payload")
 
             return payload
         except httpx.HTTPError as e:
-            print(f"Error while making request for: {e.request.url}")
-            raise e
+            # Network/status-level errors
+            raise ProviderError(f"Genius HTTP error: {str(e)}") from e
+        except ValueError as e:
+            # JSON decoding or similar
+            raise ProviderError(f"Genius parse error: {str(e)}") from e
 
-    # TODO handle for tracks that have multiple artists
     async def _search(
         self, title: str, artist: str, per_page: int = 1, page: int = 1
     ) -> Dict[str, Any]:
         if not title or not artist:
-            raise ValueError("Title and artist must be provided")
+            raise ProviderError("Title and artist must be provided")
         params = {
             "q": f"{title}-{artist}",
             "per_page": per_page,
             "page": page,
         }
-        res = await self._get("/search", params)
-        return res
+        return await self._get("/search", params)
 
     def _first_track_id(self, search_result: Dict[str, Any]) -> Optional[int]:
         hits = search_result.get("hits", [])
         if not hits:
-            raise ValueError("No results found")
+            raise NoResultsError("No results found")
 
         first = hits[0]
         if first.get("type") == "song":
             return first.get("result", {}).get("id")
-        return None
+        raise NoResultsError("Top result is not a song")
 
-    async def _url_for_track(self, id: int) -> Optional[str]:
+    async def _url_for_track(self, id: int) -> str:
         res = await self._get(f"/songs/{id}")
-        if res.get("song"):
-            return res.get("song", {}).get("url")
-        return None
+        song = res.get("song")
+        if not song:
+            raise ProviderError("Song payload missing in response")
+        url = song.get("url")
+        if not url:
+            raise NoResultsError("No URL found for track")
+        return url
 
     async def get_lyric_url(self, title: str, artist: str) -> Optional[str]:
         try:
             res = await self._search(title, artist)
-            id = self._first_track_id(res)
-            if not id:
-                return None
+            track_id = self._first_track_id(res)
+            if not track_id:
+                raise NoResultsError("No track ID found")
 
-            url = await self._url_for_track(id)
-            if not url:
-                print(f"URL not found for {title}-{artist} ")
-                return None
-
+            url = await self._url_for_track(track_id)
             return url
+        except (NoResultsError, ProviderError):
+            # Raise domain errors unchanged so the route can translate them to proper HTTP codes
+            raise
         except Exception as e:
-            raise ValueError(f"Error fetching lyrics: {str(e)}")
+            # Any other unexpected error is a provider failure from the app's perspective
+            raise ProviderError(f"Genius client error: {str(e)}") from e
 
     async def scrape_lyrics(self, url: str) -> Tuple[Optional[str], Optional[str]]:
         prune_filer = PruningContentFilter(
             threshold=0.5,
             threshold_type="fixed",
         )
-
         fit_md_generator = DefaultMarkdownGenerator(
             content_filter=prune_filer,
             content_source="raw_html",
             options={"ignore_links": True},
         )
-
         config = CrawlerRunConfig(
             css_selector="div[data-lyrics-container='true']",
             excluded_selector="div[data-exclude-from-selection='true']",
@@ -130,43 +134,9 @@ class Genius(LyricsBaseProvider):
                 result = await crawler.arun(url, config=config)
 
             if not result.success:  # type: ignore
-                print("Scraper Failed:", result.error_message)  # type: ignore
-                print("Debug HTML snippet:\n", result.cleaned_html[:1000])  # type: ignore
-                return None, result.error_message  # type: ignore
+                return None, str(result.error_message)  # type: ignore
 
             md = result.markdown  # type: ignore
             return md, None
         except Exception as e:
             return None, str(e)
-
-
-# async def amain() -> None:
-#     ACCESS_TOKEN = os.getenv("GENIUS_CLIENT_ACCESS_TOKEN")
-#     if not ACCESS_TOKEN:
-#         raise ValueError("No access token provided")
-
-#     genius = Genius(ACCESS_TOKEN)
-#     try:
-#         lyric_url = await genius.get_lyric_url(
-#             title="feel it in the air", artist="beanie sigel"
-#         )
-#         if not lyric_url:
-#             raise ValueError("No lyrics found")
-
-#         md, err = await genius.scrape_lyrics(lyric_url)
-#         if not md:
-#             raise RuntimeError(f"No lyrics found: {err}")
-
-#         lyrics = genius.clean_lyrics_markdown(md)
-
-#         with open("lyrics.md", "w", encoding="utf-8") as f:
-#             f.write(lyrics)
-
-#     except Exception as e:
-#         print(f"Error fetcing lyrics: {str(e)}")
-#     finally:
-#         await genius.aclose()
-
-
-# if __name__ == "__main__":
-#     asyncio.run(amain())

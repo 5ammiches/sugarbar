@@ -1,13 +1,26 @@
 import { SpotifyApi } from "@spotify/web-api-ts-sdk";
+import { z } from "zod";
 import { logger } from "@/lib/utils";
 import {
-  mapSpotifyAlbum,
-  mapSpotifyArtist,
-  mapSpotifyTrack,
-} from "@/utils/mapping/spotifyMap";
+  SpotifySearchResponse,
+  SpotifySearchResponseSchema,
+  SpotifyAlbumSchema,
+  SpotifyAlbum,
+  SpotifyArtist,
+  SpotifyTrack,
+  SpotifyTrackSchema,
+  SpotifyArtistSchema,
+} from "./spotifySchemas";
 import { Album, Track, Artist } from "@/utils/typings";
-import { MusicProvider } from "@/utils/providers/base";
-import { MapperFn } from "@/utils/providers/base";
+import { MusicProvider } from "../base";
+import { MapperFn } from "../base";
+import {
+  mapEmbeddedAlbum,
+  mapEmbeddedArtist,
+  mapEmbeddedTrack,
+  pickUrl,
+  toArray,
+} from "../helpers";
 
 export class SpotifyProvider implements MusicProvider {
   private client: SpotifyApi;
@@ -27,229 +40,261 @@ export class SpotifyProvider implements MusicProvider {
     return this.client;
   }
 
-  mapAlbum: MapperFn<Album> = mapSpotifyAlbum;
-  mapTrack: MapperFn<Track> = mapSpotifyTrack;
-  mapArtist: MapperFn<Artist> = mapSpotifyArtist;
+  private mapTrack = (t: SpotifyTrack): Track => {
+    const artists = toArray(t.artists).map(mapEmbeddedArtist);
+    const album = mapEmbeddedAlbum(t.album);
 
-  async searchAlbum(artist: string, album: string) {
-    let searchResults;
+    return {
+      title: t.name,
+      release_date: t.release_date,
+      isrc: t.external_ids?.isrc,
+      duration_ms: t.duration_ms,
+      explicit_flag: t.explicit,
+      metadata: {
+        ids: { spotify: t.id },
+        source_urls: { spotify: pickUrl(t) },
+      },
+      genre_tags: t.genres,
+      lyrics_fetched_status: "not_fetched",
+      // processed_status: false,
+
+      album,
+      artists,
+    };
+  };
+
+  private mapArtist = (ar: SpotifyArtist): Artist => ({
+    name: ar.name,
+    genre_tags: ar.genres,
+    metadata: {
+      ids: { spotify: ar.id },
+      source_urls: { spotify: pickUrl(ar) },
+    },
+    // processed_status: false,
+  });
+
+  private mapAlbum = (a: SpotifyAlbum): Album => {
+    const artists = toArray(a.artists).map(mapEmbeddedArtist);
+    const items = (a.tracks?.items ?? []) as SpotifyTrack[];
+    const tracks = items.map(mapEmbeddedTrack);
+
+    return {
+      title: a.name,
+      primary_artist: artists[0],
+      total_tracks: a.total_tracks,
+      release_date: a.release_date,
+      genre_tags: a.genres,
+      metadata: {
+        ids: { spotify: a.id },
+        source_urls: { spotify: pickUrl(a) },
+      },
+      // processed_status: false,
+
+      artists,
+      tracks,
+    };
+  };
+
+  private normalize(s: string) {
+    return s
+      .toLowerCase()
+      .replace(/['’"“”`]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  private sortAlbumsForQuery(
+    items: SpotifyAlbum[],
+    wantedTitle: string,
+    wantedArtist: string
+  ): SpotifyAlbum[] {
+    const nTitle = this.normalize(wantedTitle);
+    const nArtist = this.normalize(wantedArtist);
+
+    const dateToMs = (d?: string) => (d ? new Date(d).getTime() || 0 : 0);
+
+    return items.slice().sort((a, b) => {
+      const an = this.normalize(a.name);
+      const bn = this.normalize(b.name);
+
+      const aExactTitle = an === nTitle ? 1 : 0;
+      const bExactTitle = bn === nTitle ? 1 : 0;
+      if (aExactTitle !== bExactTitle) return bExactTitle - aExactTitle;
+
+      const aArtistMatch = a.artists.some(
+        (ar) => this.normalize(ar.name) === nArtist
+      )
+        ? 1
+        : 0;
+      const bArtistMatch = b.artists.some(
+        (ar) => this.normalize(ar.name) === nArtist
+      )
+        ? 1
+        : 0;
+      if (aArtistMatch !== bArtistMatch) return bArtistMatch - aArtistMatch;
+
+      const aStarts = an.startsWith(nTitle) ? 1 : 0;
+      const bStarts = bn.startsWith(nTitle) ? 1 : 0;
+      if (aStarts !== bStarts) return bStarts - aStarts;
+
+      return dateToMs(b.release_date) - dateToMs(a.release_date);
+    });
+  }
+
+  async searchAlbum(
+    album: string,
+    artist: string
+  ): Promise<Album[] | undefined> {
+    const client = this.getSpotifyClient();
+    let rawSearch;
     try {
-      searchResults = await this.client.search(
+      rawSearch = await client.search(
         `album:${album} artist:${artist}`,
         ["album"],
         "US",
         5
       );
     } catch (err) {
-      if (err instanceof Error) {
-        logger.error("Spotify: Error when searching for album", {
-          albumName: album,
-          artist: artist,
-          error: err.message,
-        });
-        throw new Error(`Spotify: Error searching for album: ${err.message}`);
-      }
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error("Spotify: Error when searching for album", {
+        albumName: album,
+        artist,
+        error: msg,
+      });
+      throw new Error(`Spotify: Error searching for album: ${msg}`);
     }
 
-    if (!searchResults || !searchResults.albums.items.length) {
-      logger.error("Spotify: No albums found for search", {
-        albumName: album,
-        artist: artist,
+    const result = SpotifySearchResponseSchema.safeParse(rawSearch);
+    if (!result.success) {
+      logger.error("Spotify: search payload parse failed", {
+        album,
+        artist,
+        issues: result.error?.issues,
+      });
+      throw new Error("Spotify: Unexpected search response shape");
+    }
+
+    const albumsPage = result.data.albums;
+    if (!albumsPage || albumsPage.items.length === 0) {
+      logger.warn("Spotify: No albums found for search", { album, artist });
+      return [];
+    }
+
+    const ranked = this.sortAlbumsForQuery(albumsPage.items, album, artist);
+
+    return ranked.map((a) => this.mapAlbum(a));
+  }
+
+  async getAlbumById(albumId: string): Promise<Album | undefined> {
+    const client = this.getSpotifyClient();
+    let raw;
+    try {
+      raw = await client.albums.get(albumId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error("Spotify: Error fetching full album after search", {
+        albumId: albumId,
+        error: msg,
+      });
+      throw new Error(`Spotify: Error fetching album ${albumId}: ${msg}`);
+    }
+
+    const fullAlbum = SpotifyAlbumSchema.safeParse(raw);
+    if (!fullAlbum.success) {
+      logger.error("Spotify: full album payload parse failed", {
+        albumId: albumId,
+        issues: fullAlbum.error.issues,
+      });
+
+      return undefined;
+    }
+
+    return this.mapAlbum(fullAlbum.data);
+  }
+
+  async getTracksByAlbumId(albumId: string): Promise<Track[] | undefined> {
+    const client = this.getSpotifyClient();
+    let raw;
+    try {
+      raw = await client.albums.tracks(albumId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error("Spotify: Error fetching album tracks after search", {
+        albumId: albumId,
+        error: msg,
       });
       throw new Error(
-        `Spotify: No albums found for search: ${album} by ${artist}`
+        `Spotify: Error fetching tracks for album ${albumId}: ${msg}`
       );
     }
 
-    const result = searchResults.albums.items[0];
-
-    const mappedAlbum = this.mapAlbum(result);
-
-    if (!mappedAlbum) {
-      logger.error("Spotify: Failed to map album information", {
-        albumName: album,
-        artist: artist,
+    const TrackArraySchema = z.array(SpotifyTrackSchema);
+    const parsed = TrackArraySchema.safeParse(raw.items);
+    if (!parsed.success) {
+      logger.error("Spotify: full album payload parse failed", {
+        albumId: albumId,
+        issues: parsed.error.issues,
       });
-      throw new Error("Spotify: Failed to map album information.");
+
+      return undefined;
     }
 
-    return mappedAlbum;
+    const fullTracks = parsed.data;
+
+    return fullTracks.map((t) => this.mapTrack(t));
   }
 
-  async getAlbumbyId(id: string) {
-    let album;
+  async getTrackById(trackId: string): Promise<Track | undefined> {
+    const client = this.getSpotifyClient();
+    let raw;
     try {
-      album = await this.client.albums.get(id);
+      raw = await client.tracks.get(trackId);
     } catch (err) {
-      if (err instanceof Error) {
-        logger.error("Spotify: Error fetching album from Spotify", {
-          albumId: id,
-          error: err.message,
-        });
-
-        if (
-          err.message.includes("404") ||
-          err.message.includes("Resource not found")
-        ) {
-          throw new Error(`Spotify: Album not found for ID: ${id}`);
-        }
-        throw new Error(`Spotify: Error fetching album: ${err.message}`);
-      }
-
-      throw new Error("Spotify: Error fetching album: Unknown error");
-    }
-
-    if (!album) {
-      logger.error(`Spotify: No album found for ID: ${id}`, {
-        albumId: id,
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error("Spotify: Error fetching track after search", {
+        trackId: trackId,
+        error: msg,
       });
-      throw new Error(`Spotify: No album found for ID: ${id}`);
+      throw new Error(`Spotify: Error fetching track ${trackId}: ${msg}`);
     }
 
-    const mappedAlbum = this.mapAlbum(album);
-
-    if (!mappedAlbum) {
-      logger.error("Spotify: Failed to map album information", {
-        albumId: id,
+    const fullTrack = SpotifyTrackSchema.safeParse(raw);
+    if (!fullTrack.success) {
+      logger.error("Spotify: full tracks payload parse failed", {
+        trackId: trackId,
+        issues: fullTrack.error.issues,
       });
-      throw new Error("Spotify: Failed to map album information.");
+
+      return undefined;
     }
 
-    return mappedAlbum;
+    return this.mapTrack(fullTrack.data);
   }
 
-  async getTracksByAlbumId(id: string) {
-    let album;
+  async getArtistById(artistId: string): Promise<Artist | undefined> {
+    const client = this.getSpotifyClient();
+    let raw;
     try {
-      album = await this.client.albums.get(id);
+      raw = await client.artists.get(artistId);
     } catch (err) {
-      if (err instanceof Error) {
-        logger.error("Spotify: Error fetching album from Spotify", {
-          albumId: id,
-          error: err.message,
-        });
-
-        if (
-          err.message.includes("404") ||
-          err.message.includes("Resource not found")
-        ) {
-          throw new Error(`Spotify: Album not found for ID: ${id}`);
-        }
-        throw new Error(`Spotify: Error fetching album: ${err.message}`);
-      }
-
-      throw new Error("Spotify: Error fetching album: Unknown error");
-    }
-
-    if (!album) {
-      logger.error(`Spotify: No album found for ID: ${id}`, {
-        albumId: id,
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error("Spotify: Error fetching artist after search", {
+        artistId: artistId,
+        error: msg,
       });
-      throw new Error(`Spotify: No album found for ID: ${id}`);
+      throw new Error(`Spotify: Error fetching artist ${artistId}: ${msg}`);
     }
 
-    const releaseDate = album.release_date;
-    const albumName = album.name;
-    const result = album.tracks.items;
-
-    const tracks: Track[] = [];
-
-    for (const item of result) {
-      const mappedTrack = this.mapTrack({
-        ...item,
-        release_date: releaseDate,
-        album_name: albumName,
+    const fullArtist = SpotifyArtistSchema.safeParse(raw);
+    if (!fullArtist.success) {
+      logger.error("Spotify: full artist payload parse failed", {
+        artistId: artistId,
+        issues: fullArtist.error.issues,
       });
-      if (mappedTrack) {
-        tracks.push(mappedTrack);
-      }
+
+      return undefined;
     }
 
-    if (!tracks || tracks.length === 0) {
-      throw new Error(`Spotify: No tracks found for album ID: ${id}`);
-    }
-
-    return tracks;
-  }
-
-  async getArtistById(id: string) {
-    let artist;
-    try {
-      artist = await this.client.artists.get(id);
-    } catch (err) {
-      if (err instanceof Error) {
-        logger.error("Spotify: Error fetching artist from Spotify", {
-          artistId: id,
-          error: err.message,
-        });
-        if (
-          err.message.includes("404") ||
-          err.message.includes("Resource not found")
-        ) {
-          throw new Error(`Spotify: Artist not found for ID: ${id}`);
-        }
-        throw new Error(`Spotify: Error fetching artist: ${err.message}`);
-      }
-
-      throw new Error("Spotify: Error fetching artist: Unknown error");
-    }
-
-    if (!artist) {
-      logger.error(`Spotify: No artist found from Spotify for ID : ${id}`, {
-        artistId: id,
-      });
-      throw new Error(`Spotify: No artist found from Spotify for ID: ${id}`);
-    }
-
-    const mappedArtist = this.mapArtist(artist);
-
-    if (!mappedArtist) {
-      logger.error("Spotify: Failed to map artist information", {
-        artistId: id,
-      });
-      throw new Error(`spotify: failed to map artist information.`);
-    }
-
-    return mappedArtist;
-  }
-
-  async getTrackById(id: string) {
-    let track;
-    try {
-      track = await this.client.tracks.get(id);
-    } catch (err) {
-      if (err instanceof Error) {
-        logger.error("Spotify: Error fetching track from Spotify", {
-          trackId: id,
-          error: err.message,
-        });
-        if (
-          err.message.includes("404") ||
-          err.message.includes("Resource not found")
-        ) {
-          throw new Error(`Spotify: Track not found for ID: ${id}`);
-        }
-        throw new Error(`Spotify: Error fetching track: ${err.message}`);
-      }
-      throw new Error("Spotify: Error fetching track: Unknown error");
-    }
-
-    if (!track) {
-      logger.error(`Spotify: No track found from Spotify for ID : ${id}`, {
-        artistId: id,
-      });
-      throw new Error(`Spotify: No track found from Spotify for ID: ${id}`);
-    }
-
-    const mappedTrack = this.mapTrack(track);
-
-    if (!mappedTrack) {
-      logger.error("Spotify: Failed to map track information", {
-        artistId: id,
-      });
-      throw new Error(`spotify: failed to map track information.`);
-    }
-
-    return mappedTrack;
+    return this.mapArtist(fullArtist.data);
   }
 }
