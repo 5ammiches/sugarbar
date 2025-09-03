@@ -11,7 +11,7 @@ import {
   SpotifyTrackSchema,
   SpotifyArtistSchema,
 } from "./spotifySchemas";
-import { Album, Track, Artist } from "@/utils/typings";
+import { Album, Track, Artist } from "../../utils/typings";
 import { MusicProvider } from "../base";
 import { MapperFn } from "../base";
 import {
@@ -20,7 +20,7 @@ import {
   mapEmbeddedTrack,
   pickUrl,
   toArray,
-} from "../helpers";
+} from "../../utils/helpers";
 
 export class SpotifyProvider implements MusicProvider {
   private client: SpotifyApi;
