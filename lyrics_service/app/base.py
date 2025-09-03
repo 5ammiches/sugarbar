@@ -1,12 +1,21 @@
 import re
 import unicodedata
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple
+from typing import Optional, Protocol, Tuple, runtime_checkable
 
 from unidecode import unidecode
 
 
+@runtime_checkable
+class AsyncClosable(Protocol):
+    async def aclose(self):
+        return None
+
+
 class LyricsBaseProvider(ABC):
+    async def aclose(self) -> None:
+        return None
+
     @abstractmethod
     async def get_lyric_url(self, title: str, artist: str) -> Optional[str]:
         raise NotImplementedError

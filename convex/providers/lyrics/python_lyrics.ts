@@ -1,6 +1,6 @@
 import { logger } from "@/lib/utils";
 import { LyricProvider, MapperFn } from "@/utils/providers/base";
-import { LyricSource, LyricResponse } from "@/utils/typings";
+import { LyricSource, LyricResponseSchema } from "@/utils/typings";
 import { ZodError } from "zod";
 
 export class PythonLyricProvider implements LyricProvider {
@@ -21,41 +21,54 @@ export class PythonLyricProvider implements LyricProvider {
         artist
       )}`;
 
-    try {
-      const resp = await fetch(url, {
-        method: "GET",
-        headers: { Accept: "application/json" },
+    const resp = await fetch(url, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+
+    const isJson = resp.headers
+      .get("content-type")
+      ?.toLowerCase()
+      .includes("application/json");
+
+    if (!resp.ok) {
+      let detail = `${resp.status} ${resp.statusText}`;
+      try {
+        if (isJson) {
+          const errBody = await resp.json();
+          if (errBody?.detail) {
+            detail =
+              typeof errBody.detail === "string"
+                ? errBody.detail
+                : JSON.stringify(errBody.detail);
+          }
+        } else {
+          const text = await resp.text();
+          if (text) detail = text;
+        }
+      } catch {
+        // ignore parse failures
+      }
+
+      logger.error("Lyrics request failed", {
+        status: resp.status,
+        url,
+        detail,
       });
-
-      if (!resp.ok) {
-        logger.error("Lyrics request failed", {
-          status: resp.status,
-          statusText: resp.statusText,
-          url,
-        });
-        throw new Error(
-          `Lyrics: Request to ${url} ${resp.status} ${resp.statusText}`
-        );
-      }
-
-      const data = await resp.json();
-
-      return LyricResponse.parse(data);
-    } catch (err) {
-      if (err instanceof Error) {
-        logger.error("Error getting lyrics for track", {
-          artist: artist,
-          title: title,
-        });
-        throw new Error(`Lyrics: Error getting lyrics: ${err.message}`);
-      }
-      if (err instanceof ZodError) {
-        logger.error("Error parsing lyrics response", {
-          artist: artist,
-          title: title,
-        });
-        throw new Error(`Lyrics: Error parsing lyric response: ${err.message}`);
-      }
+      throw new Error(`Lyrics: ${detail}`);
     }
+
+    const data = isJson ? await resp.json() : await resp.text();
+    const lyrics = LyricResponseSchema.safeParse(data);
+    if (!lyrics.success) {
+      logger.error(`${source}: lyrics payload parse failed`, {
+        title,
+        artist,
+        issues: lyrics.error?.issues,
+      });
+      throw new Error(`${source}: Unexpected lyric response shape`);
+    }
+
+    return lyrics.data;
   }
 }
