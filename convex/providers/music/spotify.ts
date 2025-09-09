@@ -1,26 +1,18 @@
+import { logger } from "@/lib/utils";
 import { SpotifyApi } from "@spotify/web-api-ts-sdk";
 import { z } from "zod";
-import { logger } from "@/lib/utils";
+import { normalizeText, pickUrl, toArray } from "../../utils/helpers";
+import { Album, Artist, EmbeddedAlbum, Track } from "../../utils/typings";
+import { MapperFn, MusicProvider } from "../base";
 import {
-  SpotifySearchResponse,
+  SpotifyAlbumUnified,
+  SpotifyAlbumUnifiedSchema,
+  SpotifyArtistUnified,
+  SpotifyArtistUnifiedSchema,
   SpotifySearchResponseSchema,
-  SpotifyAlbumSchema,
-  SpotifyAlbum,
-  SpotifyArtist,
-  SpotifyTrack,
-  SpotifyTrackSchema,
-  SpotifyArtistSchema,
+  SpotifyTrackUnified,
+  SpotifyTrackUnifiedSchema,
 } from "./spotifySchemas";
-import { Album, Track, Artist } from "../../utils/typings";
-import { MusicProvider } from "../base";
-import { MapperFn } from "../base";
-import {
-  mapEmbeddedAlbum,
-  mapEmbeddedArtist,
-  mapEmbeddedTrack,
-  pickUrl,
-  toArray,
-} from "../../utils/helpers";
 
 export class SpotifyProvider implements MusicProvider {
   private client: SpotifyApi;
@@ -40,19 +32,22 @@ export class SpotifyProvider implements MusicProvider {
     return this.client;
   }
 
-  private mapTrack = (t: SpotifyTrack): Track => {
-    const artists = toArray(t.artists).map(mapEmbeddedArtist);
-    const album = mapEmbeddedAlbum(t.album);
+  private mapTrack = (t: SpotifyTrackUnified): Track => {
+    const artists = toArray(t.artists).map(this.mapArtist);
+    const url = pickUrl(t);
+    const urls = url ? { spotify: url } : undefined;
+    const album = t.album ? this.mapEmbeddedAlbum(t.album) : undefined;
 
     return {
       title: t.name,
+      primary_artist: artists[0],
       release_date: t.release_date,
       isrc: t.external_ids?.isrc,
       duration_ms: t.duration_ms,
       explicit_flag: t.explicit,
       metadata: {
-        ids: { spotify: t.id },
-        source_urls: { spotify: pickUrl(t) },
+        provider_ids: { spotify: t.id },
+        urls,
       },
       genre_tags: t.genres,
       lyrics_fetched_status: "not_fetched",
@@ -63,20 +58,48 @@ export class SpotifyProvider implements MusicProvider {
     };
   };
 
-  private mapArtist = (ar: SpotifyArtist): Artist => ({
-    name: ar.name,
-    genre_tags: ar.genres,
-    metadata: {
-      ids: { spotify: ar.id },
-      source_urls: { spotify: pickUrl(ar) },
-    },
-    // processed_status: false,
-  });
+  private mapEmbeddedAlbum = (
+    al: SpotifyAlbumUnified
+  ): EmbeddedAlbum | undefined => {
+    if (!al) return undefined;
 
-  private mapAlbum = (a: SpotifyAlbum): Album => {
-    const artists = toArray(a.artists).map(mapEmbeddedArtist);
-    const items = (a.tracks?.items ?? []) as SpotifyTrack[];
-    const tracks = items.map(mapEmbeddedTrack);
+    const url = pickUrl(al);
+    const urls = url ? { spotify: url } : undefined;
+
+    return {
+      title: al.name,
+      metadata: {
+        provider_ids: { spotify: al.id },
+        urls,
+      },
+    };
+  };
+
+  private mapArtist = (ar: SpotifyArtistUnified): Artist => {
+    const url = pickUrl(ar);
+    const urls = url ? { spotify: url } : undefined;
+
+    return {
+      name: ar.name,
+      genre_tags: ar.genres,
+      metadata: {
+        provider_ids: { spotify: ar.id },
+        urls,
+      },
+      // processed_status: false,
+    };
+  };
+
+  private mapAlbum = (a: SpotifyAlbumUnified): Album => {
+    const images: string[] = (a.images ?? [])
+      .map((img) => img.url)
+      .filter((u): u is string => typeof u === "string" && u.length > 0);
+
+    const artists = toArray(a.artists).map(this.mapArtist);
+    const url = pickUrl(a);
+    const urls = url ? { spotify: url } : undefined;
+    const items = (a.tracks?.items ?? []) as SpotifyTrackUnified[];
+    const tracks = items.map(this.mapTrack);
 
     return {
       title: a.name,
@@ -85,9 +108,10 @@ export class SpotifyProvider implements MusicProvider {
       release_date: a.release_date,
       genre_tags: a.genres,
       metadata: {
-        ids: { spotify: a.id },
-        source_urls: { spotify: pickUrl(a) },
+        provider_ids: { spotify: a.id },
+        urls,
       },
+      imageUrls: images,
       // processed_status: false,
 
       artists,
@@ -104,61 +128,59 @@ export class SpotifyProvider implements MusicProvider {
   }
 
   private sortAlbumsForQuery(
-    items: SpotifyAlbum[],
-    wantedTitle: string,
-    wantedArtist: string
-  ): SpotifyAlbum[] {
+    items: SpotifyAlbumUnified[],
+    wantedTitle: string
+  ): SpotifyAlbumUnified[] {
     const nTitle = this.normalize(wantedTitle);
-    const nArtist = this.normalize(wantedArtist);
-
     const dateToMs = (d?: string) => (d ? new Date(d).getTime() || 0 : 0);
 
     return items.slice().sort((a, b) => {
       const an = this.normalize(a.name);
       const bn = this.normalize(b.name);
 
-      const aExactTitle = an === nTitle ? 1 : 0;
-      const bExactTitle = bn === nTitle ? 1 : 0;
-      if (aExactTitle !== bExactTitle) return bExactTitle - aExactTitle;
+      // 1) exact title
+      const aExact = an === nTitle ? 1 : 0;
+      const bExact = bn === nTitle ? 1 : 0;
+      if (aExact !== bExact) return bExact - aExact;
 
-      const aArtistMatch = a.artists.some(
-        (ar) => this.normalize(ar.name) === nArtist
-      )
-        ? 1
-        : 0;
-      const bArtistMatch = b.artists.some(
-        (ar) => this.normalize(ar.name) === nArtist
-      )
-        ? 1
-        : 0;
-      if (aArtistMatch !== bArtistMatch) return bArtistMatch - aArtistMatch;
-
+      // 2) startsWith
       const aStarts = an.startsWith(nTitle) ? 1 : 0;
       const bStarts = bn.startsWith(nTitle) ? 1 : 0;
       if (aStarts !== bStarts) return bStarts - aStarts;
 
+      // 3) includes
+      const aIncl = an.includes(nTitle) ? 1 : 0;
+      const bIncl = bn.includes(nTitle) ? 1 : 0;
+      if (aIncl !== bIncl) return bIncl - aIncl;
+
+      // 4) prefer real albums over singles/compilations (tiny nudge)
+      const aType = (a.album_type || "").toLowerCase() === "album" ? 1 : 0;
+      const bType = (b.album_type || "").toLowerCase() === "album" ? 1 : 0;
+      if (aType !== bType) return bType - aType;
+
+      // 5) newest first
       return dateToMs(b.release_date) - dateToMs(a.release_date);
     });
   }
 
-  async searchAlbum(
-    album: string,
-    artist: string
-  ): Promise<Album[] | undefined> {
+  async searchAlbum(query: string): Promise<Album[] | undefined> {
     const client = this.getSpotifyClient();
+    if (!query) {
+      logger.error("Spotify: No query provided for search", {
+        query: query,
+      });
+      throw new Error("No query provided for search");
+    }
+
+    const normalizedQuery = normalizeText(query);
+
     let rawSearch;
     try {
-      rawSearch = await client.search(
-        `album:${album} artist:${artist}`,
-        ["album"],
-        "US",
-        5
-      );
+      rawSearch = await client.search(normalizedQuery, ["album"], "US", 10);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error("Spotify: Error when searching for album", {
-        albumName: album,
-        artist,
+        query: query,
         error: msg,
       });
       throw new Error(`Spotify: Error searching for album: ${msg}`);
@@ -167,8 +189,7 @@ export class SpotifyProvider implements MusicProvider {
     const result = SpotifySearchResponseSchema.safeParse(rawSearch);
     if (!result.success) {
       logger.error("Spotify: search payload parse failed", {
-        album,
-        artist,
+        query,
         issues: result.error?.issues,
       });
       throw new Error("Spotify: Unexpected search response shape");
@@ -176,13 +197,24 @@ export class SpotifyProvider implements MusicProvider {
 
     const albumsPage = result.data.albums;
     if (!albumsPage || albumsPage.items.length === 0) {
-      logger.warn("Spotify: No albums found for search", { album, artist });
+      logger.warn("Spotify: No albums found for search", { query });
       return [];
     }
 
-    const ranked = this.sortAlbumsForQuery(albumsPage.items, album, artist);
+    const ranked = this.sortAlbumsForQuery(albumsPage.items, query);
 
-    return ranked.map((a) => this.mapAlbum(a));
+    // Fetch full album details to include tracks (needed for explicit flag)
+    const fullAlbums = await Promise.all(
+      ranked.map(async (a) => {
+        try {
+          return await this.getAlbumById(a.id);
+        } catch {
+          return undefined;
+        }
+      })
+    );
+
+    return fullAlbums.filter((al): al is Album => !!al);
   }
 
   async getAlbumById(albumId: string): Promise<Album | undefined> {
@@ -199,7 +231,7 @@ export class SpotifyProvider implements MusicProvider {
       throw new Error(`Spotify: Error fetching album ${albumId}: ${msg}`);
     }
 
-    const fullAlbum = SpotifyAlbumSchema.safeParse(raw);
+    const fullAlbum = SpotifyAlbumUnifiedSchema.safeParse(raw);
     if (!fullAlbum.success) {
       logger.error("Spotify: full album payload parse failed", {
         albumId: albumId,
@@ -228,7 +260,7 @@ export class SpotifyProvider implements MusicProvider {
       );
     }
 
-    const TrackArraySchema = z.array(SpotifyTrackSchema);
+    const TrackArraySchema = z.array(SpotifyTrackUnifiedSchema);
     const parsed = TrackArraySchema.safeParse(raw.items);
     if (!parsed.success) {
       logger.error("Spotify: full album payload parse failed", {
@@ -258,7 +290,7 @@ export class SpotifyProvider implements MusicProvider {
       throw new Error(`Spotify: Error fetching track ${trackId}: ${msg}`);
     }
 
-    const fullTrack = SpotifyTrackSchema.safeParse(raw);
+    const fullTrack = SpotifyTrackUnifiedSchema.safeParse(raw);
     if (!fullTrack.success) {
       logger.error("Spotify: full tracks payload parse failed", {
         trackId: trackId,
@@ -285,7 +317,7 @@ export class SpotifyProvider implements MusicProvider {
       throw new Error(`Spotify: Error fetching artist ${artistId}: ${msg}`);
     }
 
-    const fullArtist = SpotifyArtistSchema.safeParse(raw);
+    const fullArtist = SpotifyArtistUnifiedSchema.safeParse(raw);
     if (!fullArtist.success) {
       logger.error("Spotify: full artist payload parse failed", {
         artistId: artistId,

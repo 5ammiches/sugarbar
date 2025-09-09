@@ -1,6 +1,6 @@
 import { logger } from "@/lib/utils";
-import { LyricProvider, MapperFn } from "@/utils/providers/base";
-import { LyricSource, LyricResponseSchema } from "@/utils/typings";
+import { LyricProvider, MapperFn } from "../base";
+import { LyricSource, LyricResponseSchema } from "../../utils/typings";
 import { ZodError } from "zod";
 
 export class PythonLyricProvider implements LyricProvider {
@@ -52,6 +52,8 @@ export class PythonLyricProvider implements LyricProvider {
 
       logger.error("Lyrics request failed", {
         status: resp.status,
+        title,
+        artist,
         url,
         detail,
       });

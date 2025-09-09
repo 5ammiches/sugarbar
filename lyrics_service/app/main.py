@@ -46,7 +46,8 @@ app.add_middleware(
 )
 
 
-# TODO support multiple artists
+# TODO use arun_many() for crawling multiple urls instead of 1 crawl right now
+#
 @app.get("/lyrics/{source}", response_class=ORJSONResponse)
 async def get_lyrics(
     source: LyricSource,
@@ -74,11 +75,10 @@ async def get_lyrics(
         cleaned_lyrics = client.clean_lyrics_markdown(lyrics_md)
 
         return {
-            "provider": provider_name,
+            "source": provider_name,
             "title": title,
             "artist": artist,
-            "lyrics": cleaned_lyrics
-            or f"No lyrics found in {provider_name.capitalize()}",
+            "lyrics": cleaned_lyrics,
             "url": url,
         }
 

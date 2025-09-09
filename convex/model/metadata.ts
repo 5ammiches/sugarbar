@@ -1,48 +1,44 @@
 import { Metadata } from "../utils/typings";
 
-export function shallowMergeMetadata(
+export function mergeStringMap(
+  a?: Record<string, string>,
+  b?: Record<string, string>
+) {
+  const merged = { ...(a ?? {}), ...(b ?? {}) };
+
+  const cleaned = Object.fromEntries(
+    Object.entries(merged).filter(
+      ([, v]) => typeof v === "string" && v.trim().length > 0
+    )
+  ) as Record<string, string>;
+
+  return Object.keys(cleaned).length ? cleaned : undefined;
+}
+
+export function mergeMetadata(
   existing?: Partial<Metadata>,
   incoming?: Partial<Metadata>
 ): Metadata | undefined {
   if (!existing && !incoming) return undefined;
 
-  if (!existing) {
-    return {
-      ids: incoming?.ids ?? {},
-      source_urls: incoming?.source_urls ?? {},
-      audio_urls: incoming?.audio_urls ?? {},
-      ...incoming,
-    } as Metadata;
-  }
+  const providerIds = mergeStringMap(
+    existing?.provider_ids,
+    incoming?.provider_ids
+  );
 
-  if (!incoming) {
-    return {
-      ids: existing?.ids ?? {},
-      source_urls: existing?.source_urls ?? {},
-      audio_urls: existing?.audio_urls ?? {},
-      ...existing,
-    } as Metadata;
-  }
+  const urls = mergeStringMap(existing?.urls, incoming?.urls);
 
-  const merged: Metadata = {
-    ids: { ...(existing.ids ?? {}), ...(incoming.ids ?? {}) },
-    source_urls: {
-      ...(existing.source_urls ?? {}),
-      ...(incoming.source_urls ?? {}),
-    },
-    audio_urls:
-      incoming.audio_urls !== undefined
-        ? incoming.audio_urls
-        : existing.audio_urls,
-    ...existing,
-    ...incoming,
+  const audioUrlsArr = Array.from(
+    new Set([...(existing?.audio_urls ?? []), ...(incoming?.audio_urls ?? [])])
+  );
+
+  const audioUrls = audioUrlsArr.length ? audioUrlsArr : undefined;
+
+  return {
+    ...(existing ?? {}),
+    ...(incoming ?? {}),
+    provider_ids: providerIds,
+    urls: urls,
+    audio_urls: audioUrls,
   };
-
-  merged.ids = { ...(existing.ids ?? {}), ...(incoming.ids ?? {}) };
-  merged.source_urls = {
-    ...(existing.source_urls ?? {}),
-    ...(incoming.source_urls ?? {}),
-  };
-
-  return merged;
 }

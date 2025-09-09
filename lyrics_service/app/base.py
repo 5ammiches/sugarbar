@@ -1,7 +1,14 @@
 import re
 import unicodedata
+from crawl4ai import (
+    AsyncWebCrawler,
+    CacheMode,
+    CrawlerRunConfig,
+    DefaultMarkdownGenerator,
+    PruningContentFilter,
+)
 from abc import ABC, abstractmethod
-from typing import Optional, Protocol, Tuple, runtime_checkable
+from typing import Optional, Protocol, Tuple, runtime_checkable, List
 
 from unidecode import unidecode
 
@@ -24,6 +31,39 @@ class LyricsBaseProvider(ABC):
     async def scrape_lyrics(self, url: str) -> Tuple[Optional[str], Optional[str]]:
         raise NotImplementedError("scrape_lyrics is not supported for this provider")
 
+    async def scrape_urls(self, urls: List[str]) -> Tuple[Optional[str], Optional[str]]:
+        prune_filer = PruningContentFilter(
+            threshold=0.5,
+            threshold_type="fixed",
+        )
+        fit_md_generator = DefaultMarkdownGenerator(
+            content_filter=prune_filer,
+            content_source="raw_html",
+            options={"ignore_links": True},
+        )
+        config = CrawlerRunConfig(
+            css_selector="div[data-lyrics-container='true']",
+            excluded_selector="div[data-exclude-from-selection='true']",
+            cache_mode=CacheMode.BYPASS,
+            markdown_generator=fit_md_generator,
+            scan_full_page=True,
+            remove_overlay_elements=True,
+            word_count_threshold=1,
+        )
+
+        try:
+            async with AsyncWebCrawler() as crawler:
+                result = await crawler.arun_many(urls, config=config)
+
+            if not result.success:  # type: ignore
+                return None, str(result.error_message)  # type: ignore
+
+            md = result.markdown  # type: ignore
+            return md, None
+        except Exception as e:
+            return None, str(e)
+
+
     def normalize_text(self, text: str, keep_punctuation: bool = True) -> str:
         if not text:
             return ""
@@ -43,6 +83,16 @@ class LyricsBaseProvider(ABC):
 
         # Transliterate (optional, e.g. Cyrillic → Latin)
         text = unidecode(text)
+
+        # Standardize spacing around dots so acronyms like "m . a . a . d" become "m.a.a.d"
+        # Only apply when punctuation is preserved.
+        if keep_punctuation:
+            # Remove spaces surrounding dots
+            text = re.sub(r"\s*\.\s*", ".", text)
+            # Collapse repeated dots (e.g. "..." -> ".")
+            text = re.sub(r"\.{2,}", ".", text)
+            # Trim stray spaces or dots at ends
+            text = text.strip(". ")
 
         return text
 

@@ -1,140 +1,122 @@
-import { internalMutation, internalQuery, mutation } from "./_generated/server";
+import { Doc } from "./_generated/dataModel";
+import {
+  internalAction,
+  internalMutation,
+  internalQuery,
+} from "./_generated/server";
 import { internal } from "./_generated/api";
+import * as Track from "./model/track";
+import * as Album from "./model/album";
 import * as Artist from "./model/artist";
-import * as Metadata from "./model/metadata";
+import * as Lyric from "./model/lyric";
 import { v } from "convex/values";
-import { normalizeAlbumTitle, normalizeArtistName } from "./utils/helpers";
 import {
   AlbumSchema,
-  Album,
-  EmbeddedArtist,
-  EmbeddedArtistSchema,
+  ArtistSchema,
+  LyricResponseSchema,
+  TrackSchema,
 } from "./utils/typings";
-import { Id } from "./_generated/dataModel";
+import { LyricsStatus } from "./schema";
 
-// TODO organize and modularize this code
-export const findOrCreateEmbeddedArtist = internalMutation({
+export const upsertAlbum = internalMutation({
   args: {
-    artist: v.any(),
+    album: v.any(),
   },
-  handler: async (ctx, { artist }) => {
-    const ar = EmbeddedArtistSchema.parse(artist);
-    return Artist.findOrCreateEmbeddedArtist(ctx, { artist: ar });
+  handler: async (ctx, { album }) => {
+    const al = AlbumSchema.parse(album);
+    const id = await Album.upsertAlbum(ctx, { album: al });
+    return id;
   },
 });
 
-export const addAlbum = internalMutation({
-  args: { album: v.any() },
+export const getAlbum = internalQuery({
+  args: { albumId: v.id("album") },
+  handler: async (ctx, { albumId }) => {
+    return await ctx.db.get(albumId);
+  },
+});
+
+export const upsertArtist = internalMutation({
+  args: { artist: v.any() },
+  handler: async (ctx, { artist }) => {
+    const ar = ArtistSchema.parse(artist);
+    const id = await Artist.upsertArtist(ctx, { artist: ar });
+    return id;
+  },
+});
+
+export const getArtist = internalQuery({
+  args: { artistId: v.id("artist") },
+  handler: async (ctx, { artistId }) => {
+    return await ctx.db.get(artistId);
+  },
+});
+
+export const upsertTrack = internalMutation({
+  args: {
+    track: v.any(),
+  },
+  handler: async (ctx, { track }) => {
+    const tr = TrackSchema.parse(track);
+    const id = await Track.upsertTrack(ctx, { track: tr });
+    return id;
+  },
+});
+
+export const getTrack = internalQuery({
+  args: { trackId: v.id("track") },
+  handler: async (ctx, { trackId }) => {
+    return await ctx.db.get(trackId);
+  },
+});
+
+export const updateTrackLyricStatus = internalMutation({
+  args: {
+    trackId: v.id("track"),
+    status: LyricsStatus,
+  },
+  handler: async (ctx, { trackId, status }) => {
+    return await ctx.db.patch(trackId, { lyrics_fetched_status: status });
+  },
+});
+
+// TODO maybe add an operation for deleting a lyric variant then updating the track's lyrics_fetched_status
+export const upsertLyricVariant = internalMutation({
+  args: {
+    trackId: v.id("track"),
+    lyric: v.any(),
+  },
+  handler: async (ctx, { trackId, lyric }) => {
+    const ly = LyricResponseSchema.parse(lyric);
+    const id = await Lyric.upsertLyricVariant(ctx, {
+      trackId: trackId,
+      lyric: ly,
+    });
+    return id;
+  },
+});
+
+export const upsertAlbumTrack = internalMutation({
+  args: {
+    albumId: v.id("album"),
+    trackId: v.id("track"),
+  },
   handler: async (ctx, args) => {
-    const al = AlbumSchema.parse(args.album);
-    let existing;
+    const existing = await ctx.db
+      .query("album_track")
+      .withIndex("by_album_track", (q) =>
+        q.eq("album_id", args.albumId).eq("track_id", args.trackId)
+      )
+      .first();
 
-    const { base_title, edition_tag } = normalizeAlbumTitle(al.title);
-    const titleNormalized = base_title;
-    const edTag = edition_tag ?? "";
-
-    // collect Artist IDs
-    const artistIds: Id<"artist">[] = [];
-    for (const a of al.artists) {
-      const artistId = await ctx.runMutation(
-        internal.db.findOrCreateEmbeddedArtist,
-        {
-          artist: a,
-        }
-      );
-      artistIds.push(artistId);
+    if (existing) {
+      return existing._id;
     }
 
-    // Find or create primary artist
-    let primaryArtistId: Id<"artist">;
-    if (al.primary_artist) {
-      primaryArtistId = await ctx.runMutation(
-        internal.db.findOrCreateEmbeddedArtist,
-        {
-          artist: al.primary_artist,
-        }
-      );
-    } else if (artistIds.length > 0) {
-      primaryArtistId = artistIds[0];
-    }
-
-    // find existing album by provider IDs
-    const providerIds = al.metadata?.ids ?? {};
-    for (const [provider, id] of Object.entries(providerIds)) {
-      if (!id) continue;
-
-      const hit = await ctx.db
-        .query("album")
-        .filter((q) => q.eq(q.field(`metadata.ids.${provider}`), id))
-        .first();
-
-      if (hit) {
-        existing = hit;
-        break;
-      }
-    }
-
-    if (!existing) {
-      existing = await ctx.db
-        .query("album")
-        .withIndex("by_title_primary_edition", (q) =>
-          q
-            .eq("title_normalized", titleNormalized)
-            .eq("primary_artist_id", primaryArtistId)
-            .eq("edition_tag", edTag)
-        )
-        .first();
-    }
-
-    artistIds.sort();
-    if (!existing && artistIds.length > 0) {
-      existing = await ctx.db
-        .query("album")
-        .withIndex("by_title_artist_ids_edition", (q) =>
-          q
-            .eq("title_normalized", titleNormalized)
-            .eq("artist_ids", artistIds)
-            .eq("edition_tag", edTag)
-        )
-        .first();
-    }
-
-    const incomingMetadata = al.metadata ?? {};
-    const totalTracks =
-      al.total_tracks ?? (Array.isArray(al.tracks) ? al.tracks.length : 0);
-
-    const albumId = existing?._id;
-    if (albumId) {
-      await ctx.db.patch(albumId, {
-        title: al.title,
-        title_normalized: titleNormalized,
-        artist_ids: artistIds,
-        edition_tag: edition_tag ?? existing?.edition_tag,
-        release_date: al.release_date ?? existing?.release_date,
-        total_tracks: totalTracks || existing?.total_tracks,
-        genre_tags:
-          (al.genre_tags && al.genre_tags.length > 0
-            ? al.genre_tags
-            : existing?.genre_tags) ?? [],
-        metadata: Metadata.shallowMergeMetadata(
-          existing?.metadata,
-          incomingMetadata
-        ),
-      });
-    } else {
-      const newId = await ctx.db.insert("album", {
-        title: al.title,
-        title_normalized: titleNormalized,
-        primary_artist_id: artistIds[0],
-        artist_ids: artistIds,
-        release_date: al.release_date ?? "",
-        total_tracks: totalTracks,
-        edition_tag, // may be undefined
-        genre_tags: al.genre_tags ?? [],
-        metadata: incomingMetadata,
-        // processed_status: false,
-      });
-      return newId;
-    }
+    const newId = await ctx.db.insert("album_track", {
+      album_id: args.albumId,
+      track_id: args.trackId,
+    });
+    return newId;
   },
 });

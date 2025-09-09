@@ -4,7 +4,7 @@ import {
   Track,
   LyricResponse,
   LyricSource,
-} from "@/utils/typings";
+} from "../utils/typings";
 
 export type MapperFn<T> = (raw: Record<string, any>) => T | undefined;
 
