@@ -4,61 +4,44 @@ import { LYRIC_SOURCES } from "@/lib/constants";
 /**
  * Reusable atoms
  */
-export const ProviderIdsSchema = z.object({
-  spotify: z.string().optional(),
-});
-
-export const SourceUrlsSchema = z.object({
-  spotify: z.url().optional(),
-  apple: z.url().optional(),
-  youtube: z.url().optional(),
-});
+export const ProviderIdsSchema = z.record(z.string(), z.string().min(1));
+export const UrlsSchema = z.record(z.string(), z.url());
 
 export const MetadataSchema = z
   .object({
-    ids: ProviderIdsSchema,
-    source_urls: SourceUrlsSchema,
+    provider_ids: ProviderIdsSchema.optional(),
+    urls: UrlsSchema.optional(),
     audio_urls: z.array(z.url()).optional(),
   })
   .catchall(z.any());
 
 /**
- * Embeddable snapshots (denormalized for convenience)
- * Keep them small and UI-friendly; the normalized docs are still the source of truth
- */
-export const EmbeddedArtistSchema = z.object({
-  provider_id: z.string().optional(),
-  provider: z.string().optional(),
-  name: z.string(),
-  url: z.url().optional(),
-});
-
-export const EmbeddedAlbumSchema = z.object({
-  provider_id: z.string().optional(),
-  provider: z.string().optional(),
-  title: z.string().optional(),
-  url: z.url().optional(),
-});
-
-export const EmbeddedTrackSchema = z.object({
-  provider_id: z.string().optional(),
-  provider: z.string().optional(),
-  title: z.string(),
-  duration_ms: z.number().optional(),
-  explicit_flag: z.boolean().optional(),
-  url: z.url().optional(),
-  primary_artist: EmbeddedArtistSchema.optional(),
-  album: EmbeddedAlbumSchema.optional(),
-});
-
-/**
  * Normalized domain entities
  */
+// Forward declarations via z.lazy
 export const ArtistSchema = z.object({
   name: z.string(),
   genre_tags: z.array(z.string()).default([]),
   metadata: MetadataSchema.optional(),
-  // processed_status: z.boolean().default(false),
+});
+
+export const AlbumSchema = z.object({
+  total_tracks: z.number().optional(),
+  title: z.string(),
+  primary_artist: ArtistSchema.optional(),
+  artists: z.array(ArtistSchema).default([]),
+  get tracks() {
+    return z.array(TrackSchema).default([]);
+  },
+  imageUrls: z.array(z.url()).optional(),
+  release_date: z.string().optional(),
+  genre_tags: z.array(z.string()).default([]),
+  metadata: MetadataSchema.optional(),
+});
+
+export const EmbeddedAlbumSchema = z.object({
+  title: z.string(),
+  metadata: MetadataSchema.optional(),
 });
 
 export const TrackSchema = z.object({
@@ -68,26 +51,14 @@ export const TrackSchema = z.object({
   duration_ms: z.number(),
   explicit_flag: z.boolean(),
   album: EmbeddedAlbumSchema.optional(),
-  artists: z.array(EmbeddedArtistSchema).default([]),
+  primary_artist: ArtistSchema.optional(),
+  artists: z.array(ArtistSchema).default([]),
   lyrics: z.string().optional(),
   genre_tags: z.array(z.string()).default([]),
   lyrics_fetched_status: z
     .enum(["not_fetched", "fetching", "fetched", "failed"])
     .default("not_fetched"),
   metadata: MetadataSchema.optional(),
-  // processed_status: z.boolean().default(false),
-});
-
-export const AlbumSchema = z.object({
-  total_tracks: z.number().optional(),
-  title: z.string(),
-  primary_artist: EmbeddedArtistSchema.optional(),
-  artists: z.array(EmbeddedArtistSchema).default([]),
-  tracks: z.array(EmbeddedTrackSchema).default([]),
-  release_date: z.string().optional(),
-  genre_tags: z.array(z.string()).default([]),
-  metadata: MetadataSchema.optional(),
-  // processed_status: z.boolean().default(false),
 });
 
 /**
@@ -96,10 +67,10 @@ export const AlbumSchema = z.object({
 export const LyricSource = z.enum(LYRIC_SOURCES);
 
 export const LyricResponseSchema = z.object({
-  provider: LyricSource,
+  source: LyricSource,
   title: z.string(),
   artist: z.string(),
-  lyrics: z.string().optional(),
+  lyrics: z.string(),
   url: z.url().optional(),
 });
 
@@ -107,13 +78,9 @@ export const LyricResponseSchema = z.object({
  * Types
  */
 export type Metadata = z.infer<typeof MetadataSchema>;
-
-export type EmbeddedArtist = z.infer<typeof EmbeddedArtistSchema>;
-export type EmbeddedAlbum = z.infer<typeof EmbeddedAlbumSchema>;
-export type EmbeddedTrack = z.infer<typeof EmbeddedTrackSchema>;
-
 export type Artist = z.infer<typeof ArtistSchema>;
 export type Track = z.infer<typeof TrackSchema>;
 export type Album = z.infer<typeof AlbumSchema>;
+export type EmbeddedAlbum = z.infer<typeof EmbeddedAlbumSchema>;
 export type LyricResponse = z.infer<typeof LyricResponseSchema>;
 export type LyricSource = z.infer<typeof LyricSource>;

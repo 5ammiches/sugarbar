@@ -11,6 +11,12 @@ export const SpotifyExternalIdSchema = z.object({
   isrc: z.string().optional(),
 });
 
+export const SpotifyImageSchema = z.object({
+  url: z.url().optional(),
+  height: z.number().optional(),
+  width: z.number().optional(),
+});
+
 export const SpotifyPagingSchema = <T extends z.ZodTypeAny>(item: T) =>
   z.object({
     href: z.url().optional(),
@@ -23,13 +29,14 @@ export const SpotifyPagingSchema = <T extends z.ZodTypeAny>(item: T) =>
   });
 
 /**
- * Artist response
+ * Unified Artist
+ * Accepts both full and simplified: genres optional with default []
  */
-export const SpotifyArtistSchema = z
+export const SpotifyArtistUnifiedSchema = z
   .object({
     id: z.string(),
     name: z.string(),
-    genres: z.array(z.string()).default([]),
+    genres: z.array(z.string()).default([]), // simplified payloads omit this
     external_urls: SpotifyExternalUrlSchema.optional(),
     type: z.string().optional(),
     uri: z.string().optional(),
@@ -38,62 +45,36 @@ export const SpotifyArtistSchema = z
   .catchall(z.any());
 
 /**
- * Album response (full album as returned by albums.get or in search results)
- * Note: Spotify often omits genres on album objects; keep optional.
+ * Unified Album
+ * Accepts both full album and simplified album (from track)
  */
-export const SpotifySimplifiedArtistSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  external_urls: SpotifyExternalUrlSchema.optional(),
-  href: z.url().optional(),
-  type: z.string().optional(),
-  uri: z.string().optional(),
-});
-
-export const SpotifyAlbumSchema = z
+export const SpotifyAlbumUnifiedSchema = z
   .object({
     id: z.string(),
+    images: z.array(SpotifyImageSchema).optional(),
     name: z.string(),
     album_type: z.string().optional(),
     release_date: z.string().optional(),
     release_date_precision: z.enum(["year", "month", "day"]).optional(),
     total_tracks: z.number().optional(),
-    artists: z.array(SpotifySimplifiedArtistSchema),
+    artists: z.array(SpotifyArtistUnifiedSchema).optional(), // simplified album may not have full artists
     external_urls: SpotifyExternalUrlSchema.optional(),
     genres: z.array(z.string()).default([]),
     label: z.string().optional(),
     type: z.string().optional(),
     uri: z.string().optional(),
     href: z.url().optional(),
-    // When fetched via albums.get, a nested tracks paging object is present
-    tracks: SpotifyPagingSchema(
-      z.object({
-        id: z.string(),
-        name: z.string(),
-        duration_ms: z.number(),
-        explicit: z.boolean(),
-        track_number: z.number().optional(),
-        disc_number: z.number().optional(),
-        external_urls: SpotifyExternalUrlSchema.optional(),
-        artists: z.array(SpotifySimplifiedArtistSchema).optional(),
-        href: z.url().optional(),
-        uri: z.string().optional(),
-      })
-    ).optional(),
+    get tracks() {
+      return SpotifyPagingSchema(SpotifyTrackUnifiedSchema).optional();
+    },
   })
   .catchall(z.any());
 
 /**
- * Track response (full track as returned by tracks.get)
+ * Unified Track
+ * artists are simplified in API, but unified artist handles it
  */
-export const SpotifySimplifiedAlbumSchema = z.object({
-  id: z.string().optional(),
-  name: z.string(),
-  release_date: z.string().optional(),
-  external_urls: SpotifyExternalUrlSchema.optional(),
-});
-
-export const SpotifyTrackSchema = z
+export const SpotifyTrackUnifiedSchema = z
   .object({
     id: z.string(),
     external_ids: SpotifyExternalIdSchema.optional(),
@@ -103,10 +84,10 @@ export const SpotifyTrackSchema = z
     explicit: z.boolean(),
     external_urls: SpotifyExternalUrlSchema.optional(),
     track_number: z.number().optional(),
-    genres: z.array(z.string()).default([]),
+    genres: z.array(z.string()).default([]), // many endpoints don’t include track genres
     disc_number: z.number().optional(),
-    album: SpotifySimplifiedAlbumSchema.optional(),
-    artists: z.array(SpotifySimplifiedArtistSchema).default([]),
+    album: SpotifyAlbumUnifiedSchema.optional(),
+    artists: z.array(SpotifyArtistUnifiedSchema).default([]),
     type: z.string().optional(),
     uri: z.string().optional(),
     href: z.url().optional(),
@@ -116,14 +97,17 @@ export const SpotifyTrackSchema = z
 /**
  * Search responses (albums, artists, tracks)
  */
-export const SpotifyAlbumSearchPageSchema =
-  SpotifyPagingSchema(SpotifyAlbumSchema);
+export const SpotifyAlbumSearchPageSchema = SpotifyPagingSchema(
+  SpotifyAlbumUnifiedSchema
+);
 
-export const SpotifyArtistSearchPageSchema =
-  SpotifyPagingSchema(SpotifyArtistSchema);
+export const SpotifyArtistSearchPageSchema = SpotifyPagingSchema(
+  SpotifyArtistUnifiedSchema
+);
 
-export const SpotifyTrackSearchPageSchema =
-  SpotifyPagingSchema(SpotifyTrackSchema);
+export const SpotifyTrackSearchPageSchema = SpotifyPagingSchema(
+  SpotifyTrackUnifiedSchema
+);
 
 export const SpotifySearchResponseSchema = z
   .object({
@@ -133,16 +117,7 @@ export const SpotifySearchResponseSchema = z
   })
   .catchall(z.any());
 
+export type SpotifyArtistUnified = z.infer<typeof SpotifyArtistUnifiedSchema>;
+export type SpotifyAlbumUnified = z.infer<typeof SpotifyAlbumUnifiedSchema>;
+export type SpotifyTrackUnified = z.infer<typeof SpotifyTrackUnifiedSchema>;
 export type SpotifySearchResponse = z.infer<typeof SpotifySearchResponseSchema>;
-
-export type SpotifyArtist = z.infer<typeof SpotifyArtistSchema>;
-export type SpotifySimplifiedArtist = z.infer<
-  typeof SpotifySimplifiedArtistSchema
->;
-
-export type SpotifyAlbum = z.infer<typeof SpotifyAlbumSchema>;
-export type SpotifySimplifiedAlbum = z.infer<
-  typeof SpotifySimplifiedAlbumSchema
->;
-
-export type SpotifyTrack = z.infer<typeof SpotifyTrackSchema>;

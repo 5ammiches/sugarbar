@@ -1,21 +1,37 @@
 import { MutationCtx } from "../_generated/server";
-import { normalizeArtistName } from "../utils/helpers";
-import { EmbeddedArtist, Metadata } from "../utils/typings";
+import { Doc, Id } from "../_generated/dataModel";
+import { arraysEqualUnordered, normalizeText } from "../utils/helpers";
+import { Artist } from "../utils/typings";
+import { mergeMetadata } from "./metadata";
 
-export async function findOrCreateEmbeddedArtist(
+type ResolveArtistResult = {
+  existing: Doc<"artist"> | null;
+  nameNormalized: string;
+};
+
+export async function resolveOrFindArtist(
   ctx: MutationCtx,
-  { artist }: { artist: EmbeddedArtist }
-) {
-  const nameNormalized = normalizeArtistName(artist.name);
-  let existing =
-    artist.provider && artist.provider_id
-      ? await ctx.db
-          .query("artist")
-          .filter((q) =>
-            q.eq(q.field(`metadata.ids.${artist.provider}`), artist.provider_id)
-          )
-          .first()
-      : null;
+  { artist }: { artist: Artist }
+): Promise<ResolveArtistResult> {
+  let existing;
+  const nameNormalized = normalizeText(artist.name);
+  const incomingIds = artist.metadata?.provider_ids ?? {};
+
+  for (const [provider, id] of Object.entries(incomingIds)) {
+    if (!id) continue;
+
+    existing = await ctx.db
+      .query("artist")
+      .filter((q) => q.eq(q.field(`metadata.provider_ids.${provider}`), id))
+      .first();
+
+    if (existing) {
+      return {
+        existing: existing,
+        nameNormalized,
+      };
+    }
+  }
 
   if (!existing) {
     existing = await ctx.db
@@ -26,44 +42,67 @@ export async function findOrCreateEmbeddedArtist(
       .first();
   }
 
-  let artistId = existing?._id;
-  if (!artistId) {
-    artistId = await ctx.db.insert("artist", {
-      name: artist.name,
-      name_normalized: nameNormalized,
-      aliases: [],
-      genre_tags: [],
-      metadata: {
-        ids:
-          artist.provider_id && artist.provider
-            ? { [artist.provider]: artist.provider_id }
-            : {},
-        source_urls:
-          artist.url && artist.provider
-            ? { [artist.provider]: artist.url }
-            : {},
-      },
-      // processed_status: false,
-    });
-  } else {
-    if (artist.provider_id && artist.provider) {
-      const updatedIds = {
-        ...(existing?.metadata?.ids ?? {}),
-        [artist.provider]: artist.provider_id,
-      };
-      const updatedUrls = {
-        ...(existing?.metadata?.source_urls ?? {}),
-        [artist.provider]: artist.url,
-      };
-      await ctx.db.patch(artistId, {
-        metadata: {
-          ...(existing?.metadata ?? {}),
-          ids: updatedIds,
-          source_urls: updatedUrls,
-        } as Metadata,
+  return {
+    existing: existing,
+    nameNormalized,
+  };
+}
+
+export async function buildArtistIds(
+  ctx: MutationCtx,
+  { artists }: { artists: Artist[] }
+): Promise<Id<"artist">[]> {
+  const artistIds = [];
+
+  for (const a of artists) {
+    const artistId = await upsertArtist(ctx, { artist: a });
+    artistIds.push(artistId);
+  }
+
+  return artistIds;
+}
+
+export async function upsertArtist(
+  ctx: MutationCtx,
+  { artist }: { artist: Artist }
+): Promise<Id<"artist">> {
+  const { existing, nameNormalized } = await resolveOrFindArtist(ctx, {
+    artist: artist,
+  });
+  const incomingMeta = artist.metadata ?? {};
+
+  if (existing) {
+    const mergedMeta = mergeMetadata(existing.metadata, incomingMeta);
+    const metaChanged =
+      JSON.stringify(existing.metadata ?? {}) !==
+      JSON.stringify(mergedMeta ?? {});
+
+    const incomingGenres = artist.genre_tags ?? [];
+    const desiredGenres =
+      incomingGenres.length > 0 ? incomingGenres : existing.genre_tags ?? [];
+    const genresChanged = !arraysEqualUnordered(
+      existing.genre_tags ?? [],
+      desiredGenres
+    );
+
+    if (metaChanged || genresChanged) {
+      await ctx.db.patch(existing._id, {
+        genre_tags: desiredGenres,
+        metadata: mergedMeta,
       });
     }
+
+    return existing._id;
   }
+
+  const metadata = mergeMetadata(undefined, incomingMeta);
+  const artistId = await ctx.db.insert("artist", {
+    name: artist.name,
+    name_normalized: nameNormalized,
+    aliases: [],
+    genre_tags: artist.genre_tags ?? [],
+    metadata: metadata,
+  });
 
   return artistId;
 }

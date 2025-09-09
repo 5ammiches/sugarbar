@@ -131,8 +131,10 @@ class Musixmatch(LyricsBaseProvider):
             headless=True,
             verbose=True,
             use_managed_browser=True,
+            use_persistent_context=True,
             user_data_dir=self.musixmatch_profile_path,
             browser_type="chromium",
+            text_mode=True
         )
 
         try:
@@ -152,6 +154,7 @@ class Musixmatch(LyricsBaseProvider):
 
                 raw = data[0]
 
+                # FIX normalize functions here for the title and artist
                 query_title = self.normalize_text(title)
                 # query_artist = self.normalize_text(artist)
                 best_results = []
@@ -162,11 +165,12 @@ class Musixmatch(LyricsBaseProvider):
 
                         if "url" in track and track["url"]:
                             track["url"] = urljoin(self.BASE_URL, track["url"])
-                            if (
-                                track["title"] == query_title
-                                # and track["artist"] == query_artist
-                            ):
-                                best_results.append(track)
+                            # if (
+                            #     track["title"] == query_title
+                            #     # and track["artist"] == query_artist
+                            # ):
+                            #     best_results.append(track)
+                            best_results.append(track)
 
                 tracks = []
                 for t in raw.get("tracks", []):
@@ -176,11 +180,11 @@ class Musixmatch(LyricsBaseProvider):
                         track["title"] = self.normalize_text(track.get("title", ""))
                         track["artist"] = self.normalize_text(track.get("artist", ""))
 
-                        if (
-                            track["title"] == query_title
-                            # and track["artist"] == query_artist
-                        ):
-                            tracks.append(track)
+                        # if (
+                        #     track["title"] == query_title
+                        #     # and track["artist"] == query_artist
+                        # ):
+                        tracks.append(track)
 
                 return {"best_result": best_results, "tracks": tracks}
 

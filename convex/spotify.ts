@@ -1,6 +1,7 @@
-import { internalAction } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { Album } from "./utils/typings";
 import { SpotifyProvider } from "./providers/music/spotify";
 
 // TODO structure a way to get albums + tracks + artist + lyrics + metadata + genre_tags + audio
@@ -22,7 +23,7 @@ export const getArtistById = internalAction({
       throw new Error(`Artist not found for ${args.artistId}`);
     }
 
-    return { artist: artist };
+    return artist;
   },
 });
 
@@ -38,7 +39,7 @@ export const getAlbumById = internalAction({
       throw new Error(`Album not found for ${args.albumId}`);
     }
 
-    return { album: album };
+    return album;
   },
 });
 
@@ -54,7 +55,7 @@ export const getTracksByAlbumId = internalAction({
       throw new Error(`No tracks found for album ${args.albumId}`);
     }
 
-    return { tracks: tracks };
+    return tracks;
   },
 });
 
@@ -70,70 +71,37 @@ export const getTrackById = internalAction({
       throw new Error(`No track found for ${args.trackId}`);
     }
 
-    return { track: track };
+    return track;
   },
 });
 
 /**
- * returns top 5 results from search
+ * returns top 10 results from search
  */
 export const searchAlbum = internalAction({
   args: {
-    album: v.string(),
-    artist: v.string(),
+    query: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { query }) => {
     const spot = makeSpotify();
 
-    const albums = await spot.searchAlbum(args.album, args.artist);
+    const albums = await spot.searchAlbum(query);
     if (!albums || albums.length === 0) {
       throw new Error("Album not found");
     }
 
-    return { albums: albums };
+    return albums;
+  },
+});
 
-    // const id = albums[0].metadata?.ids?.spotify;
-    // if (!id) {
-    //   throw new Error("Album ID not found");
-    // }
-
-    // const album = await spot.getAlbumById(id);
-    // if (!album) {
-    //   throw new Error("Album not found");
-    // }
-
-    // const baseTracks = album.tracks ?? [];
-    // if (baseTracks.length === 0) {
-    //   return { album, tracks: [] };
-    // }
-
-    // const enriched = await Promise.all(
-    //   baseTracks.map(async (t) => {
-    //     const trackId = t.provider_id;
-    //     if (!trackId) return t;
-
-    //     try {
-    //       const full = await spot.getTrackById(trackId);
-    //       if (!full) return t;
-
-    //       const isrc = full.isrc ?? null;
-    //       const metadata = full.metadata ?? {};
-
-    //       return {
-    //         ...t,
-    //         artists: full.artists,
-    //         isrc,
-    //         metadata,
-    //       };
-    //     } catch {
-    //       return t;
-    //     }
-    //   })
-    // );
-
-    // return {
-    //   album,
-    //   tracks: enriched,
-    // };
+export const searchAlbums = action({
+  args: {
+    query: v.string(),
+  },
+  handler: async (ctx, { query }): Promise<Album[]> => {
+    const albums = await ctx.runAction(internal.spotify.searchAlbum, {
+      query: query,
+    });
+    return albums;
   },
 });

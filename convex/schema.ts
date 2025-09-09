@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 export const MetadataField = v.record(v.string(), v.any());
 
-const LyricsStatus = v.union(
+export const LyricsStatus = v.union(
   v.literal("not_fetched"),
   v.literal("fetching"),
   v.literal("fetched"),
@@ -24,7 +24,6 @@ export const AlbumFields = {
 };
 
 export const TrackFields = {
-  album_id: v.id("album"),
   artist_ids: v.array(v.id("artist")),
   primary_artist_id: v.id("artist"),
   title: v.string(),
@@ -52,16 +51,39 @@ export const ArtistFields = {
   metadata: v.optional(MetadataField),
 };
 
-export const LyricsVariantFields = {
+export const LyricVariantFields = {
   track_id: v.id("track"),
   source: v.string(), // "genius" | "musixmatch" | "other"
-  raw_text: v.string(),
+  lyrics: v.string(),
   url: v.optional(v.string()),
   text_hash: v.string(), // normalized text hash for dedupe
   last_crawled_at: v.number(), // epoch ms
   version: v.optional(v.number()), // increment if the same source text changes
   confidence: v.optional(v.number()), // keep simple (0-1)
   processed_status: v.boolean(), // NLP/alignment not yet done -> false
+};
+
+export const AlbumTrackFields = {
+  album_id: v.id("album"),
+  track_id: v.id("track"),
+};
+
+export const WorkflowJobFields = {
+  workflow_id: v.string(),
+  workflow_name: v.string(),
+  args: v.optional(v.any()),
+  status: v.union(
+    v.literal("queued"),
+    v.literal("in_progress"),
+    v.literal("success"),
+    v.literal("failed"),
+    v.literal("canceled")
+  ),
+  progress: v.optional(v.number()),
+  started_at: v.optional(v.number()),
+  updated_at: v.optional(v.number()),
+  error: v.optional(v.string()),
+  context: v.optional(v.any()),
 };
 
 export default defineSchema({
@@ -82,15 +104,26 @@ export default defineSchema({
       "edition_tag",
     ]),
 
-  track: defineTable(TrackFields)
+  album_track: defineTable(AlbumTrackFields)
     .index("by_album_id", ["album_id"])
+    .index("by_track_id", ["track_id"])
+    .index("by_album_track", ["album_id", "track_id"]),
+
+  track: defineTable(TrackFields)
     .index("by_primary_artist", ["primary_artist_id"])
     .index("by_title_normalized", ["title_normalized"])
     .index("by_isrc", ["isrc"])
     .index("by_canonical_key", ["canonical_key"])
     .index("by_lyrics_status", ["lyrics_fetched_status"]),
-  lyrics_variant: defineTable(LyricsVariantFields)
+
+  lyric_variant: defineTable(LyricVariantFields)
     .index("by_track_id", ["track_id"])
     .index("by_track_source", ["track_id", "source"])
     .index("by_text_hash", ["text_hash"]),
+
+  workflow_job: defineTable(WorkflowJobFields)
+    .index("by_workflow_id", ["workflow_id"])
+    .index("by_status", ["status"])
+    .index("by_workflow_name", ["workflow_name"])
+    .index("by_started_at", ["started_at"]),
 });
