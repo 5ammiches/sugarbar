@@ -125,6 +125,7 @@ export async function upsertAlbum(
           ? album.genre_tags
           : existing?.genre_tags) ?? [],
       metadata: Metadata.mergeMetadata(existing?.metadata, incomingMetadata),
+      images: album.imageUrls ?? existing.images,
     });
     if (Array.isArray(album.tracks) && album.tracks.length > 0) {
       await ctx.db.patch(existing._id, { artist_ids: artistIds });
@@ -142,6 +143,7 @@ export async function upsertAlbum(
     edition_tag: editionTag,
     genre_tags: album.genre_tags ?? [],
     metadata: incomingMetadata,
+    images: album.imageUrls ?? [],
     // processed_status: false,
   });
   return newId;

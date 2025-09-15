@@ -1,6 +1,6 @@
 import { vWorkflowId, WorkflowManager } from "@convex-dev/workflow";
 import { v } from "convex/values";
-import { components, internal } from "./_generated/api";
+import { components, internal, api } from "./_generated/api";
 import { action, internalMutation, mutation } from "./_generated/server";
 import { vResultValidator } from "@convex-dev/workpool";
 
@@ -25,7 +25,6 @@ export const albumWorkflow = workflow.define({
     const spotifyRetry = { maxAttempts: 5, initialBackoffMs: 300, base: 2 };
     const lyricRetry = { maxAttempts: 6, initialBackoffMs: 300, base: 2 };
 
-    // TODO fix artists that are not supposed to be in Album artist_ids field (e.g. Jay-Z is an artist on GKMC)
     // 1) Fetch album and upsert
     const album = await step.runAction(
       spot.getAlbumById,
@@ -38,6 +37,27 @@ export const albumWorkflow = workflow.define({
       { album },
       { name: "db.upsertAlbum" }
     );
+
+    await step.runMutation(
+      internal.workflow_jobs.patchJobContext,
+      { workflowId: step.workflowId, context: { albumId: albumDbId } },
+      { name: "workflow_jobs.patchJobContext" }
+    );
+
+    try {
+      await step.runMutation(
+        internal.workflow_jobs.createWorkflowJob,
+        {
+          workflowId: step.workflowId,
+          workflowName: "albumWorkflow",
+          args: { albumId: albumDbId, spotifyAlbumId: albumId },
+          context: { albumId: albumDbId, spotifyAlbumId: albumId },
+          status: "queued",
+          startedAt: Date.now(),
+        },
+        { name: "workflow_jobs.createWorkflowJob" }
+      );
+    } catch (e) {}
 
     // 2) Derive artist and track IDs
     const spotifyArtistIds = Array.from(
@@ -97,7 +117,7 @@ export const albumWorkflow = workflow.define({
         );
 
         await step.runAction(
-          lyric.fetchLyrics,
+          lyric.fetchLyricsInternal,
           { trackId },
           { retry: lyricRetry, name: "lyric.fetchLyrics" }
         );
@@ -113,6 +133,9 @@ export const albumWorkflow = workflow.define({
   },
 });
 
+/**
+ * Currently supports Spotify Album ID for input
+ */
 export const startAlbumWorkflow = action({
   args: { albumId: v.string() },
   handler: async (ctx, { albumId }): Promise<string> => {
@@ -124,22 +147,21 @@ export const startAlbumWorkflow = action({
       },
       {
         onComplete: internal.album_workflow.handleOnComplete,
-        context: { albumId },
+        context: { spotifyAlbumId: albumId },
       }
     );
 
-    // Create a job record (best-effort; optional module)
     try {
       await ctx.runMutation(internal.workflow_jobs.createWorkflowJob, {
         workflowId,
         workflowName: "albumWorkflow",
-        args: { albumId },
-        context: { albumId },
+        args: { spotifyAlbumId: albumId },
+        context: { spotifyAlbumId: albumId },
         status: "queued",
         startedAt: Date.now(),
       });
     } catch (e) {
-      // ignore if workflow_jobs module isn't installed
+      // best-effort: ignore create errors
     }
 
     return workflowId;
@@ -150,23 +172,27 @@ export const handleOnComplete = internalMutation({
   args: {
     workflowId: vWorkflowId,
     result: vResultValidator,
-    context: v.object({ albumId: v.string() }),
+    context: v.any(),
   },
   handler: async (ctx, { workflowId, result, context }) => {
-    const albumId = (context as { albumId: string }).albumId;
+    const ctxObj = context as any;
+    const albumId = (ctxObj && (ctxObj.albumId ?? ctxObj.spotifyAlbumId)) as
+      | string
+      | undefined;
+
     if (result.kind === "success") {
       const text = result.returnValue;
-      console.log(`${albumId} result: ${text}`);
+      console.log(`${albumId ?? "unknown"} result: ${text}`);
     } else if (result.kind === "failed") {
       console.error("Workflow failed", result.error);
     } else if (result.kind === "canceled") {
       console.log("Workflow canceled", context);
     }
-    // Update job record (best-effort; optional module)
+
     try {
       const payload: any = { workflowId, updatedAt: Date.now() };
       if (result.kind === "success") {
-        payload.status = "success";
+        payload.status = "pending_review";
         payload.progress = 100;
       } else if (result.kind === "failed") {
         payload.status = "failed";
@@ -175,9 +201,7 @@ export const handleOnComplete = internalMutation({
         payload.status = "canceled";
       }
       await ctx.runMutation(internal.workflow_jobs.updateWorkflowJob, payload);
-    } catch (e) {
-      // ignore if workflow_jobs module isn't installed
-    }
+    } catch (e) {}
 
     await workflow.cleanup(ctx, workflowId);
   },

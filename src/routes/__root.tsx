@@ -1,21 +1,16 @@
 /// <reference types="vite/client" />
-import { Link, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
-import {
-  SignInButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from "@clerk/tanstack-react-start";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { createServerFn } from "@tanstack/react-start";
-import * as React from "react";
-import { getAuth } from "@clerk/tanstack-react-start/server";
-import { getWebRequest } from "@tanstack/react-start/server";
-import { DefaultCatchBoundary } from "@/components/DefaultCatchBoundary";
-import { NotFound } from "@/components/NotFound";
 import { ClerkAuthProvider } from "@/components/auth/clerk-provider";
 import { ConvexProvider } from "@/components/ConvexProvider";
+import { DefaultCatchBoundary } from "@/components/DefaultCatchBoundary";
+import { NotFound } from "@/components/NotFound";
 import "@/styles/app.css";
+import { getAuth } from "@clerk/tanstack-react-start/server";
+import { Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
+import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { createServerFn } from "@tanstack/react-start";
+import { getWebRequest } from "@tanstack/react-start/server";
+import * as React from "react";
+import { Toaster } from "@/components/ui/sonner";
 
 const fetchClerkAuth = createServerFn({ method: "GET" }).handler(async () => {
   const { userId } = await getAuth(getWebRequest()!);
@@ -26,13 +21,13 @@ const fetchClerkAuth = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const Route = createRootRoute({
-  beforeLoad: async () => {
-    const { userId } = await fetchClerkAuth();
+  // beforeLoad: async () => {
+  //   const { userId } = await fetchClerkAuth();
 
-    return {
-      userId,
-    };
-  },
+  //   return {
+  //     userId,
+  //   };
+  // },
   head: () => ({
     meta: [
       {
@@ -79,6 +74,7 @@ export const Route = createRootRoute({
         <RootDocument>
           <Outlet />
           <TanStackRouterDevtools position="bottom-right" />
+          <Toaster richColors={true} position="top-center" />
         </RootDocument>
       </ConvexProvider>
     </ClerkAuthProvider>

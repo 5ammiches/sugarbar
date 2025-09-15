@@ -16,3 +16,5 @@ TODO.md
 .cursor/
 .output/
 .tanstack/
+.nitro/
+.ropeproject/
