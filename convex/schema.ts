@@ -19,8 +19,29 @@ export const AlbumFields = {
   total_tracks: v.optional(v.number()),
   edition_tag: v.optional(v.string()),
   genre_tags: v.array(v.string()),
+  images: v.optional(v.array(v.string())),
   // processed_status: v.boolean(),
   metadata: v.optional(MetadataField),
+
+  approved: v.optional(v.boolean()),
+  approved_at: v.optional(v.number()),
+
+  rejected: v.optional(v.boolean()),
+  rejected_at: v.optional(v.number()),
+  latest_workflow_id: v.optional(v.string()),
+  latest_workflow_status: v.optional(
+    v.union(
+      v.literal("queued"),
+      v.literal("in_progress"),
+      v.literal("success"),
+      v.literal("failed"),
+      v.literal("canceled"),
+      v.literal("pending_review"),
+      v.literal("rejected"),
+      v.literal("approved")
+    )
+  ),
+  latest_workflow_updated_at: v.optional(v.number()),
 };
 
 export const TrackFields = {
@@ -77,7 +98,10 @@ export const WorkflowJobFields = {
     v.literal("in_progress"),
     v.literal("success"),
     v.literal("failed"),
-    v.literal("canceled")
+    v.literal("canceled"),
+    v.literal("pending_review"),
+    v.literal("rejected"),
+    v.literal("approved")
   ),
   progress: v.optional(v.number()),
   started_at: v.optional(v.number()),

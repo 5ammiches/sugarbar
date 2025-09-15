@@ -1,8 +1,10 @@
-import { Doc } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 import {
   internalAction,
   internalMutation,
   internalQuery,
+  mutation,
+  query,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import * as Track from "./model/track";
@@ -16,8 +18,22 @@ import {
   LyricResponseSchema,
   TrackSchema,
 } from "./utils/typings";
+import { hashLyrics } from "./utils/helpers";
 import { LyricsStatus } from "./schema";
 
+/**
+ * Upsert an album into the DB.
+ *
+ * Behavior:
+ * - Parses/validates the incoming album with AlbumSchema.
+ * - Calls the model upsert to insert/update the album.
+ * - Ensures that albums created/updated by workflows are NOT marked approved immediately:
+ *   - If the album record doesn't exist yet, it patches approved:false.
+ *   - If the existing record has approved === true, it leaves it true.
+ *   - Otherwise it patches approved:false.
+ *
+ * This is best-effort and will swallow patch errors so it doesn't block the upsert.
+ */
 export const upsertAlbum = internalMutation({
   args: {
     album: v.any(),
@@ -25,7 +41,95 @@ export const upsertAlbum = internalMutation({
   handler: async (ctx, { album }) => {
     const al = AlbumSchema.parse(album);
     const id = await Album.upsertAlbum(ctx, { album: al });
+
+    // Ensure new/updated albums created by workflows are not published immediately.
+    // Do not overwrite approved === true if it is already true.
+    try {
+      const existing = await ctx.db.get(id);
+      if (!existing) {
+        await ctx.db.patch(id, { approved: false });
+      } else {
+        if (existing.approved !== true) {
+          await ctx.db.patch(id, { approved: false });
+        }
+      }
+    } catch (e) {}
+
     return id;
+  },
+});
+
+export const rejectAlbum = mutation({
+  args: {
+    albumId: v.id("album"),
+    workflowId: v.optional(v.string()),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, { albumId, workflowId, reason }) => {
+    const album = await ctx.db.get(albumId);
+    if (!album) {
+      throw new Error("Album not found");
+    }
+
+    if (album.rejected !== true) {
+      await ctx.db.patch(albumId, {
+        rejected: true,
+        approved: false,
+        rejected_at: Date.now(),
+      });
+    }
+
+    if (workflowId) {
+      try {
+        await ctx.runMutation(internal.workflow_jobs.updateWorkflowJob, {
+          workflowId,
+          status: "rejected",
+          progress: 0,
+          updatedAt: Date.now(),
+          error: reason ?? undefined,
+        });
+      } catch {
+        // best-effort; swallow if workflow_jobs module / update isn't available
+      }
+    }
+
+    return albumId;
+  },
+});
+
+export const approveAlbum = mutation({
+  args: {
+    albumId: v.id("album"),
+    workflowId: v.optional(v.string()),
+  },
+  handler: async (ctx, { albumId, workflowId }) => {
+    const album = await ctx.db.get(albumId);
+    if (!album) {
+      throw new Error("Album not found");
+    }
+
+    if (album.approved !== true) {
+      await ctx.db.patch(albumId, {
+        approved: true,
+        rejected: false,
+        approved_at: Date.now(),
+      });
+    }
+
+    if (workflowId) {
+      try {
+        await ctx.runMutation(internal.workflow_jobs.updateWorkflowJob, {
+          workflowId,
+          status: "approved",
+          progress: 100,
+          updatedAt: Date.now(),
+        });
+      } catch {
+        // swallow if workflow_jobs module isn't installed
+      }
+    }
+
+    return albumId;
   },
 });
 
@@ -33,6 +137,57 @@ export const getAlbum = internalQuery({
   args: { albumId: v.id("album") },
   handler: async (ctx, { albumId }) => {
     return await ctx.db.get(albumId);
+  },
+});
+
+export const getAlbumDetails = query({
+  args: { albumId: v.id("album") },
+  handler: async (ctx, { albumId }) => {
+    const album = await ctx.db.get(albumId);
+    if (!album) return null;
+
+    let primaryArtist: Doc<"artist"> | null = null;
+    if (album.primary_artist_id) {
+      primaryArtist = (await ctx.db.get(
+        album.primary_artist_id
+      )) as Doc<"artist"> | null;
+    }
+
+    const albumTracks = await ctx.db
+      .query("album_track")
+      .withIndex("by_album_id", (q) => q.eq("album_id", albumId))
+      .collect();
+
+    const trackIds = albumTracks.map((at) => at.track_id);
+
+    const tracks = await Promise.all(
+      trackIds.map(async (tid) => {
+        if (!tid) return null;
+        return (await ctx.db.get(tid)) as Doc<"track"> | null;
+      })
+    );
+
+    const tracksWithLyrics: Array<{
+      track: Doc<"track">;
+      lyric_variants: Array<Doc<"lyric_variant">>;
+    }> = [];
+    for (const tr of tracks) {
+      if (!tr) continue;
+      const variants = await ctx.db
+        .query("lyric_variant")
+        .withIndex("by_track_id", (q) => q.eq("track_id", tr._id))
+        .collect();
+      tracksWithLyrics.push({
+        track: tr,
+        lyric_variants: variants ?? [],
+      });
+    }
+
+    return {
+      album,
+      primaryArtist,
+      tracks: tracksWithLyrics,
+    };
   },
 });
 
@@ -49,6 +204,14 @@ export const getArtist = internalQuery({
   args: { artistId: v.id("artist") },
   handler: async (ctx, { artistId }) => {
     return await ctx.db.get(artistId);
+  },
+});
+
+export const getArtistsByIds = query({
+  args: { artistIds: v.array(v.id("artist")) },
+  handler: async (ctx, { artistIds }) => {
+    const artists = await Promise.all(artistIds.map((id) => ctx.db.get(id)));
+    return artists.filter((a) => a !== null);
   },
 });
 
@@ -85,12 +248,14 @@ export const upsertLyricVariant = internalMutation({
   args: {
     trackId: v.id("track"),
     lyric: v.any(),
+    forceOverwrite: v.optional(v.boolean()),
   },
-  handler: async (ctx, { trackId, lyric }) => {
+  handler: async (ctx, { trackId, lyric, forceOverwrite }) => {
     const ly = LyricResponseSchema.parse(lyric);
     const id = await Lyric.upsertLyricVariant(ctx, {
       trackId: trackId,
       lyric: ly,
+      forceOverwrite: !!forceOverwrite,
     });
     return id;
   },
@@ -118,5 +283,124 @@ export const upsertAlbumTrack = internalMutation({
       track_id: args.trackId,
     });
     return newId;
+  },
+});
+
+export const getAlbumsByIds = query({
+  args: { albumIds: v.array(v.id("album")) },
+  handler: async (ctx, { albumIds }) => {
+    const albums = await Promise.all(albumIds.map((id) => ctx.db.get(id)));
+    return albums.filter((album) => album !== null);
+  },
+});
+
+/**
+ * Public mutation to update editable track fields used by the review UI.
+ * Accepts a partial patch with allowed fields and applies them to the track doc.
+ */
+export const updateTrackDetails = mutation({
+  args: {
+    trackId: v.id("track"),
+    patch: v.record(v.string(), v.any()),
+  },
+  handler: async (ctx, { trackId, patch }) => {
+    const allowedKeys = new Set([
+      "title",
+      "title_normalized",
+      "track_number",
+      "disc_number",
+      "duration_ms",
+      "explicit_flag",
+      "isrc",
+      "edition_tag",
+      "release_date",
+      "metadata",
+      "genre_tags",
+    ]);
+
+    const safePatch: Record<string, any> = {};
+    for (const [k, vVal] of Object.entries(patch)) {
+      if (allowedKeys.has(k)) {
+        safePatch[k] = vVal;
+      }
+    }
+
+    if (Object.keys(safePatch).length === 0) {
+      throw new Error("No valid fields to update");
+    }
+
+    await ctx.db.patch(trackId, safePatch);
+    const updated = await ctx.db.get(trackId);
+    return updated;
+  },
+});
+
+/**
+ * Public mutation to update lyric variant fields (not including confidence).
+ */
+export const updateLyricVariant = mutation({
+  args: {
+    lyricVariantId: v.id("lyric_variant"),
+    patch: v.record(v.string(), v.any()),
+  },
+  handler: async (ctx, { lyricVariantId, patch }) => {
+    const allowedKeys = new Set([
+      "lyrics",
+      "url",
+      "text_hash",
+      "version",
+      "last_crawled_at",
+      "source",
+    ]);
+    const safePatch: Record<string, any> = {};
+    for (const [k, vVal] of Object.entries(patch)) {
+      if (allowedKeys.has(k)) {
+        safePatch[k] = vVal;
+      }
+    }
+
+    if (Object.keys(safePatch).length === 0) {
+      throw new Error("No valid fields to update");
+    }
+
+    // If lyrics were included in the patch, compute a new text_hash and update metadata.
+    // Preserve or increment version based on whether the hash changed.
+    try {
+      const existing = await ctx.db.get(lyricVariantId);
+      if (!existing) {
+        throw new Error("Lyric variant not found");
+      }
+
+      if (typeof safePatch.lyrics === "string") {
+        try {
+          const text_hash = await hashLyrics(safePatch.lyrics);
+          // If the text hash differs from existing, increment version; otherwise keep existing version
+          if (existing.text_hash !== text_hash) {
+            safePatch.version = (existing.version ?? 1) + 1;
+          } else {
+            safePatch.version = existing.version ?? 1;
+          }
+          safePatch.text_hash = text_hash;
+          safePatch.last_crawled_at = Date.now();
+          // mark as needing re-processing (NLP/alignment)
+          safePatch.processed_status = false;
+        } catch (e) {
+          // If hashing fails for any reason, proceed without blocking the update but surface in logs
+          // (best-effort behavior)
+          console.error(
+            "Failed to compute text_hash for lyric variant update",
+            e
+          );
+        }
+      }
+    } catch (e) {
+      // If we couldn't load the existing variant, still attempt the patch (will likely fail),
+      // but surface the error in logs.
+      console.error("Failed to load existing lyric variant for update", e);
+    }
+
+    await ctx.db.patch(lyricVariantId, safePatch);
+    const updated = await ctx.db.get(lyricVariantId);
+    return updated;
   },
 });

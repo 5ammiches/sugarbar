@@ -1,0 +1,22 @@
+# AGENTS — Sugarbar
+
+- Build/Run: `npm run dev` (Vite+Convex 3000), `npm run dev:convex`, `npm run dev:vite`, `npm run build`, `npm run start`, `npm run seed`.
+- Python service: `python lyrics_service/run_server.py` (FastAPI on 8000).
+- Lint/Format JS: Prettier 2.x; run `npx prettier -w .` before commits.
+- Lint Python: Ruff via pyproject; `cd lyrics_service && ruff check . --fix`.
+- Tests (JS/TS): none configured; if using Vitest, `npx vitest -t "pattern"` or `npx vitest path.test.ts`.
+- Tests (Python): none present; if added, `pytest tests/test_file.py::TestClass::test_name` or `pytest -k "pattern"`.
+- Imports: use `@/*` alias (vite-tsconfig-paths); React: `import { useX } from "react"` (no default import).
+- UI: import from `@/components/ui/*` (shadcn/ui); match existing prop patterns.
+- Types: strict TypeScript; define interfaces/types for props and data; prefer explicit return types; Convex `v` validators + `returns`.
+- Convex: new function syntax; file-based routing; prefer indexes over filters; use `internal*` for private functions.
+- Naming: camelCase for vars/functions, PascalCase for components/types; keep filenames consistent with neighbors.
+- Errors (UI): `console.error` and toast via `@/hooks/use-toast`; surface actionable messages.
+- Errors (Convex): throw Errors; always validate args with `v.*`; return `v.null()` when appropriate.
+- Errors (Python): raise `HTTPException` with status; log via app logger; close clients in `finally`.
+- Styling: Tailwind v4; use `clsx`/`tailwind-merge`; keep classNames readable.
+- State: React hooks; colocate server state with `@tanstack/react-query`; avoid unnecessary global state.
+- Formatting: 2-space indent, double quotes, semicolons, trailing commas (Prettier defaults).
+- Layout: components in `src/components`, routes in `src/routes`, Convex in `convex/`, Python API in `lyrics_service/`.
+- Cursor rules: follow `.cursor/rules/convex_rules.mdc` strictly for Convex functions, validators, and scheduling.
+- Copilot rules: none detected (`.github/copilot-instructions.md` not present).
