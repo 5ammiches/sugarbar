@@ -126,7 +126,8 @@ export default defineSchema({
       "title_normalized",
       "artist_ids",
       "edition_tag",
-    ]),
+    ])
+    .index("by_approved", ["approved"]),
 
   album_track: defineTable(AlbumTrackFields)
     .index("by_album_id", ["album_id"])

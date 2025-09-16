@@ -9,7 +9,6 @@
  */
 
 import type * as album_workflow from "../album_workflow.js";
-import type * as bars from "../bars.js";
 import type * as db from "../db.js";
 import type * as example from "../example.js";
 import type * as lyric from "../lyric.js";
@@ -43,7 +42,6 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   album_workflow: typeof album_workflow;
-  bars: typeof bars;
   db: typeof db;
   example: typeof example;
   lyric: typeof lyric;

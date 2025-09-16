@@ -350,14 +350,6 @@ export function normalizeTitleForLyrics(s: string): string {
 
 /**
  * Generate title variants suitable for lyrics providers that are sensitive to apostrophes.
- *
- * Variants attempted, in order:
- *  - variant that preserves apostrophes/quotes (typographic -> ASCII normalized)
- *  - variant with apostrophes removed (e.g., cant vs can't)
- *  - fallback normalized variant (same as current normalizeTitleForLyrics)
- *
- * This allows calling code (e.g. the lyrics fetch action) to try multiple queries
- * when a provider like Musixmatch treats apostrophes specially.
  */
 export function generateTitleVariantsForLyrics(s: string): string[] {
   const preserved = stripFeaturingCredits(normalizeText(s, true)).trim();

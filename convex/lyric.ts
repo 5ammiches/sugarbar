@@ -65,18 +65,6 @@ export const getLyricsByTrack = internalAction({
   },
 });
 
-/**
- * Internal action that attempts to fetch lyrics for a track and persist them.
- *
- * New behavior: accepts an optional `forceOverwrite` boolean. When true, the
- * underlying model upsert will force writing provider lyrics into the existing
- * variant record even if the normalized text hash matches. This is useful for
- * reviewer-initiated retries where the reviewer expects the fetch attempt to
- * refresh/overwrite DB content.
- *
- * Returns `true` if any lyrics were obtained from providers and persisted,
- * otherwise `false`.
- */
 export const fetchLyricsInternal = internalAction({
   args: {
     trackId: v.id("track"),
@@ -147,13 +135,6 @@ export const fetchLyricsInternal = internalAction({
   },
 });
 
-/**
- * Public action to trigger a lyric fetch for a track.
- *
- * Accepts optional `forceOverwrite` boolean which is forwarded to the internal
- * handler and to the model upsert operation. Returns a boolean indicating
- * whether lyrics were found/persisted.
- */
 export const fetchLyrics = action({
   args: { trackId: v.id("track"), forceOverwrite: v.optional(v.boolean()) },
   handler: async (ctx, { trackId, forceOverwrite }): Promise<boolean> => {
