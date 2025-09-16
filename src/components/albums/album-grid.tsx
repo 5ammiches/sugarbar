@@ -1,47 +1,48 @@
 import { useMemo } from "react";
 import { AlbumCard } from "./album-card";
-import { useQuery } from "convex/react";
-import { api } from "@/../convex/_generated/api";
 import { Doc, Id } from "@/../convex/_generated/dataModel";
 
 type AlbumDoc = Doc<"album">;
-type ArtistDoc = Doc<"artist">;
-type AlbumWithArtist = AlbumDoc & { artistName?: string };
+type AlbumWithArtistAndFlags = AlbumDoc & { artistName?: string } & {
+  flags?: { hasExplicit: boolean; hasLyrics: boolean; hasAudio: boolean };
+};
 
 interface AlbumGridProps {
   albums: AlbumDoc[];
   onAlbumClick: (album: AlbumDoc) => void;
+  artistMap: Map<Id<"artist">, Doc<"artist">>;
+  flagsMap: Map<
+    Id<"album">,
+    { hasExplicit: boolean; hasLyrics: boolean; hasAudio: boolean }
+  >;
 }
 
-export function AlbumGrid({ albums, onAlbumClick }: AlbumGridProps) {
-  const artistIds = useMemo(() => {
-    const ids: Id<"artist">[] = [];
-    for (const al of albums) {
-      const id = al.primary_artist_id as Id<"artist"> | undefined;
-      if (id) ids.push(id);
-    }
-    return Array.from(new Set(ids));
-  }, [albums]);
-
-  const artists = useQuery(
-    api.db.getArtistsByIds,
-    artistIds.length > 0 ? { artistIds } : "skip"
-  ) as ArtistDoc[] | undefined;
-
-  const artistMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const a of artists ?? []) {
-      m.set(String(a._id), a.name ?? a.name_normalized ?? "Unknown Artist");
+export function AlbumGrid({
+  albums,
+  onAlbumClick,
+  artistMap,
+  flagsMap,
+}: AlbumGridProps) {
+  const artistNameMap = useMemo(() => {
+    const m = new Map<Id<"artist">, string>();
+    const source = artistMap ?? new Map<Id<"artist">, Doc<"artist">>();
+    for (const [id, a] of source) {
+      m.set(id, a?.name ?? a?.name_normalized ?? "Unknown Artist");
     }
     return m;
-  }, [artists]);
+  }, [artistMap]);
 
   const enrichedAlbums = useMemo(() => {
     return albums.map((al) => {
-      const name = artistMap.get(String(al.primary_artist_id));
-      return name ? ({ ...al, artistName: name } as AlbumWithArtist) : al;
+      const name = artistNameMap.get(al.primary_artist_id);
+      const flags = flagsMap?.get(al._id);
+      return {
+        ...al,
+        artistName: name ?? "Unknown Artist",
+        flags,
+      } as AlbumWithArtistAndFlags;
     });
-  }, [albums, artistMap]);
+  }, [albums, artistNameMap]);
 
   if (albums.length === 0) {
     return (
@@ -72,7 +73,7 @@ export function AlbumGrid({ albums, onAlbumClick }: AlbumGridProps) {
       {enrichedAlbums.map((album) => (
         <AlbumCard
           key={album._id}
-          album={album as AlbumWithArtist}
+          album={album as AlbumWithArtistAndFlags}
           onClick={() => onAlbumClick(album as AlbumDoc)}
         />
       ))}

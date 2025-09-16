@@ -37,31 +37,19 @@ interface AlbumFiltersProps {
   filters: FilterState;
   onFiltersChange: (filters: FilterState) => void;
   albums: AlbumDoc[];
+  artistMap: Map<Id<"artist">, Doc<"artist">>;
 }
 
 export function AlbumFilters({
   filters,
   onFiltersChange,
   albums,
+  artistMap,
 }: AlbumFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Discover primary artist IDs from the current album list
-  const artistIds = useMemo(() => {
-    const ids = (albums ?? [])
-      .map((a) => a.primary_artist_id as Id<"artist">)
-      .filter(Boolean);
-    return Array.from(new Set(ids));
-  }, [albums]);
-
-  const artists =
-    useQuery(
-      api.db.getArtistsByIds,
-      artistIds.length > 0 ? { artistIds } : "skip"
-    ) ?? [];
-
   const artistNameFromId = (id: string) => {
-    const found = artists.find((a) => String(a._id) === id);
+    const found = artistMap.get(id as Id<"artist">);
     return found?.name ?? "Unknown Artist";
   };
 
@@ -144,7 +132,7 @@ export function AlbumFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all-artists">All Artists</SelectItem>
-              {artists.map((artist) => (
+              {Array.from(artistMap.values()).map((artist) => (
                 <SelectItem key={artist._id} value={String(artist._id)}>
                   {artist.name}
                 </SelectItem>
@@ -281,7 +269,7 @@ export function AlbumFilters({
             <Badge variant="secondary" className="gap-1">
               Search: {filters.search}
               <X
-                className="h-3 w-3 cursor-pointer"
+                className="h-3 w-3 cursor-pointer !pointer-events-auto"
                 onClick={() => updateFilters({ search: "" })}
               />
             </Badge>
@@ -290,7 +278,7 @@ export function AlbumFilters({
             <Badge variant="secondary" className="gap-1">
               Artist: {artistNameFromId(filters.artistId)}
               <X
-                className="h-3 w-3 cursor-pointer"
+                className="h-3 w-3 cursor-pointer !pointer-events-auto"
                 onClick={() => updateFilters({ artistId: "" })}
               />
             </Badge>
@@ -299,7 +287,7 @@ export function AlbumFilters({
             <Badge variant="secondary" className="gap-1">
               Year: {filters.year}
               <X
-                className="h-3 w-3 cursor-pointer"
+                className="h-3 w-3 cursor-pointer !pointer-events-auto"
                 onClick={() => updateFilters({ year: "" })}
               />
             </Badge>
@@ -308,7 +296,7 @@ export function AlbumFilters({
             <Badge key={genre} variant="secondary" className="gap-1">
               {genre}
               <X
-                className="h-3 w-3 cursor-pointer"
+                className="h-3 w-3 cursor-pointer !pointer-events-auto"
                 onClick={() => toggleGenre(genre)}
               />
             </Badge>

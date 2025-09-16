@@ -6,9 +6,9 @@ import React, { useMemo, useState } from "react";
 
 import { type ColumnFiltersState } from "@tanstack/react-table";
 
-import AlbumReviewDrawer from "@/components/album-review-drawer";
-import JobQueueTable, { type JobRow } from "@/components/JobQueueTable";
-import StatusCard from "@/components/status-card";
+import AlbumReviewDrawer from "@/components/jobs/album-review-drawer";
+import JobQueueTable, { type JobRow } from "@/components/jobs/JobQueueTable";
+import StatusCard from "@/components/jobs/status-card";
 import {
   Card,
   CardContent,

@@ -3,9 +3,12 @@ import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { Doc, Id } from "@/../convex/_generated/dataModel";
 
-import { AlbumGrid } from "@/components/album-grid";
-import { AlbumFilters, type FilterState } from "@/components/album-filters";
-import { AlbumDetailDrawer } from "@/components/album-detail-drawer";
+import { AlbumGrid } from "@/components/albums/album-grid";
+import {
+  AlbumFilters,
+  type FilterState,
+} from "@/components/albums/album-filters";
+import { AlbumDetailDrawer } from "@/components/albums/album-detail-drawer";
 
 type AlbumDoc = Doc<"album">;
 
@@ -28,7 +31,6 @@ export default function AlbumGallery() {
     sortBy: "newest",
   });
 
-  // Load approved albums from Convex
   const approvedAlbums =
     (useQuery(api.db.getApprovedAlbums) as AlbumDoc[] | undefined) ?? [];
 
@@ -53,7 +55,6 @@ export default function AlbumGallery() {
     return m;
   }, [flagList]);
 
-  // Primary artists for albums (used for search + sort by artist)
   const primaryArtistIds = useMemo(() => {
     const ids = approvedAlbums
       .map((a) => a.primary_artist_id as Id<"artist"> | undefined)
@@ -115,7 +116,6 @@ export default function AlbumGallery() {
       return true;
     });
 
-    // Sort
     const sorted = [...filtered].sort((a, b) => {
       switch (filters.sortBy) {
         case "newest": {
@@ -171,17 +171,19 @@ export default function AlbumGallery() {
             </p>
           </div>
 
-          {/* AlbumFilters expects Album[], so cast the convex docs to any to satisfy TS without changing its file now */}
           <AlbumFilters
             filters={filters}
             onFiltersChange={setFilters}
-            albums={approvedAlbums as unknown as any}
+            albums={approvedAlbums}
+            artistMap={artistMap}
           />
 
           {/* AlbumGrid also expects Album[], cast for compatibility */}
           <AlbumGrid
-            albums={filteredAlbums as unknown as any}
-            onAlbumClick={(a: any) => handleAlbumClick(a as AlbumDoc)}
+            albums={filteredAlbums}
+            onAlbumClick={handleAlbumClick}
+            artistMap={artistMap}
+            flagsMap={flagsMap}
           />
         </div>
       </div>

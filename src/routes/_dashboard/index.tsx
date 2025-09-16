@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import Search from "@/components/Search";
+import Search from "@/components/search/Search";
 
 export const SearchSchema = z.object({
   q: z.string().optional(),

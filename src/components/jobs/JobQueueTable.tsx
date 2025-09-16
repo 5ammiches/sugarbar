@@ -1,4 +1,4 @@
-import AlbumCell from "@/components/album-cell";
+import AlbumCell from "@/components/albums/album-cell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CardDescription, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,7 @@ import {
 
 import { Check, RotateCcw, XCircle } from "lucide-react";
 import React, { useMemo, useState } from "react";
-import DebouncedInput from "./debounced-input";
+import DebouncedInput from "@/components/search/debounced-input";
 
 function Filter({ column }: { column: any }) {
   const columnFilterValue = column.getFilterValue();
@@ -26,7 +26,7 @@ function Filter({ column }: { column: any }) {
     <DebouncedInput
       type="text"
       value={(columnFilterValue ?? "") as string}
-      onChange={(value) => column.setFilterValue(value)}
+      onChange={(value: string | number) => column.setFilterValue(value)}
       placeholder="Search..."
       className="w-36 border shadow rounded px-2 py-1 text-xs bg-background text-foreground"
     />
@@ -425,7 +425,9 @@ export default function JobQueueTable({
       <div>
         <DebouncedInput
           value={jobGlobalFilter ?? ""}
-          onChange={(value) => setJobGlobalFilter(String(value))}
+          onChange={(value: string | number) =>
+            setJobGlobalFilter(String(value))
+          }
           className="p-2 font-lg shadow border border-gray-300 rounded max-w-sm bg-background text-foreground"
           placeholder="Search jobs..."
         />
