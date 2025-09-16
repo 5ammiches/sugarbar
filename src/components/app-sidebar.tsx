@@ -1,4 +1,4 @@
-import { Search, Music, Clock, Database, Play } from "lucide-react"
+import { Search, Music, Clock, Database } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -8,41 +8,19 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
+import { Link, useRouterState } from "@tanstack/react-router";
 
 const items = [
-  {
-    title: "Search Albums",
-    url: "#search",
-    icon: Search,
-    id: "search",
-  },
-  {
-    title: "Job Queue",
-    url: "#queue",
-    icon: Clock,
-    id: "queue",
-  },
-  {
-    title: "My Albums",
-    url: "#database",
-    icon: Database,
-    id: "database",
-  },
-  {
-    title: "Progress",
-    url: "#progress",
-    icon: Play,
-    id: "progress",
-  },
-]
+  { title: "Search Albums", url: "/", icon: Search, id: "search" },
+  { title: "Job Queue", url: "/queue", icon: Clock, id: "queue" },
+  { title: "Albums", url: "/database", icon: Database, id: "database" },
+];
 
-interface AppSidebarProps {
-  activeView: string
-  onViewChange: (view: string) => void
-}
+export function AppSidebar() {
+  const { location } = useRouterState();
+  const isActive = (url: string) => location.pathname === url;
 
-export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
   return (
     <Sidebar>
       <SidebarContent>
@@ -54,12 +32,16 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={activeView === item.id} onClick={() => onViewChange(item.id)}>
-                    <button className="flex items-center gap-2">
+                <SidebarMenuItem key={item.id}>
+                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                    <Link
+                      to={item.url}
+                      search={(prev) => prev}
+                      className="flex items-center gap-2"
+                    >
                       <item.icon />
                       <span>{item.title}</span>
-                    </button>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -68,5 +50,5 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
-  )
+  );
 }

@@ -211,7 +211,7 @@ export const getArtistsByIds = query({
   args: { artistIds: v.array(v.id("artist")) },
   handler: async (ctx, { artistIds }) => {
     const artists = await Promise.all(artistIds.map((id) => ctx.db.get(id)));
-    return artists.filter((a) => a !== null);
+    return artists.filter((a): a is Doc<"artist"> => a !== null);
   },
 });
 
@@ -286,7 +286,7 @@ export const upsertAlbumTrack = internalMutation({
   },
 });
 
-export const getAlbumsByIds = query({
+export const getAlbumsByIds = internalQuery({
   args: { albumIds: v.array(v.id("album")) },
   handler: async (ctx, { albumIds }) => {
     const albums = await Promise.all(albumIds.map((id) => ctx.db.get(id)));
@@ -402,5 +402,69 @@ export const updateLyricVariant = mutation({
     await ctx.db.patch(lyricVariantId, safePatch);
     const updated = await ctx.db.get(lyricVariantId);
     return updated;
+  },
+});
+
+export const getApprovedAlbums = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db
+      .query("album")
+      .withIndex("by_approved", (q) => q.eq("approved", true))
+      .collect();
+    return rows.filter((a) => a.rejected !== true);
+  },
+});
+
+export const getAlbumContentFlags = query({
+  args: { albumIds: v.array(v.id("album")) },
+  handler: async (ctx, { albumIds }) => {
+    const results: {
+      albumId: Id<"album">;
+      hasExplicit: boolean;
+      hasLyrics: boolean;
+      hasAudio: boolean;
+    }[] = [];
+
+    for (const albumId of albumIds) {
+      let hasExplicit = false;
+      let hasLyrics = false;
+      let hasAudio = false;
+
+      const links = await ctx.db
+        .query("album_track")
+        .withIndex("by_album_id", (q) => q.eq("album_id", albumId))
+        .collect();
+
+      for (const link of links) {
+        const track = await ctx.db.get(link.track_id);
+        if (!track) continue;
+
+        if (track.explicit_flag) hasExplicit = true;
+
+        const md = (track.metadata ?? {}) as any;
+        if (
+          md?.audio_url ||
+          md?.preview_url ||
+          (Array.isArray(md?.audio_urls) && md.audio_urls.length > 0)
+        ) {
+          hasAudio = true;
+        }
+
+        if (!hasLyrics) {
+          const oneLyric = await ctx.db
+            .query("lyric_variant")
+            .withIndex("by_track_id", (q) => q.eq("track_id", track._id))
+            .first();
+          if (oneLyric) hasLyrics = true;
+        }
+
+        if (hasExplicit && hasLyrics && hasAudio) break;
+      }
+
+      results.push({ albumId, hasExplicit, hasLyrics, hasAudio });
+    }
+
+    return results;
   },
 });

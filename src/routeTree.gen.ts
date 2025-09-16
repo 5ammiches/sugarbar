@@ -9,50 +9,116 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardRouteImport } from './routes/_dashboard'
+import { Route as DashboardIndexRouteImport } from './routes/_dashboard/index'
+import { Route as DashboardQueueRouteImport } from './routes/_dashboard/queue'
+import { Route as DashboardDatabaseRouteImport } from './routes/_dashboard/database'
 
-const IndexRoute = IndexRouteImport.update({
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/_dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardQueueRoute = DashboardQueueRouteImport.update({
+  id: '/queue',
+  path: '/queue',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardDatabaseRoute = DashboardDatabaseRouteImport.update({
+  id: '/database',
+  path: '/database',
+  getParentRoute: () => DashboardRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/database': typeof DashboardDatabaseRoute
+  '/queue': typeof DashboardQueueRoute
+  '/': typeof DashboardIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/database': typeof DashboardDatabaseRoute
+  '/queue': typeof DashboardQueueRoute
+  '/': typeof DashboardIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_dashboard': typeof DashboardRouteWithChildren
+  '/_dashboard/database': typeof DashboardDatabaseRoute
+  '/_dashboard/queue': typeof DashboardQueueRoute
+  '/_dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/database' | '/queue' | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/database' | '/queue' | '/'
+  id:
+    | '__root__'
+    | '/_dashboard'
+    | '/_dashboard/database'
+    | '/_dashboard/queue'
+    | '/_dashboard/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_dashboard': {
+      id: '/_dashboard'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_dashboard/': {
+      id: '/_dashboard/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/queue': {
+      id: '/_dashboard/queue'
+      path: '/queue'
+      fullPath: '/queue'
+      preLoaderRoute: typeof DashboardQueueRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/database': {
+      id: '/_dashboard/database'
+      path: '/database'
+      fullPath: '/database'
+      preLoaderRoute: typeof DashboardDatabaseRouteImport
+      parentRoute: typeof DashboardRoute
     }
   }
 }
 
+interface DashboardRouteChildren {
+  DashboardDatabaseRoute: typeof DashboardDatabaseRoute
+  DashboardQueueRoute: typeof DashboardQueueRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardDatabaseRoute: DashboardDatabaseRoute,
+  DashboardQueueRoute: DashboardQueueRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  DashboardRoute: DashboardRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

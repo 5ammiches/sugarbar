@@ -31,7 +31,7 @@ async function updateAlbumLatest(
 /**
  * Public: listJobs
  */
-export const listJobs = query({
+export const listJobs = internalQuery({
   args: {
     status: v.optional(
       v.union(
@@ -72,6 +72,47 @@ export const listJobs = query({
     rows.sort((a, b) => (b.started_at ?? 0) - (a.started_at ?? 0));
 
     return rows.slice(0, max);
+  },
+});
+
+type QueueBundle = {
+  jobs: Doc<"workflow_job">[];
+  albums: Doc<"album">[];
+  artists: Doc<"artist">[];
+};
+
+export const getQueueBundle = query({
+  args: v.object({}),
+  handler: async (ctx): Promise<QueueBundle> => {
+    const jobs = await ctx.runQuery(internal.workflow_jobs.listJobs, {});
+
+    const albumIds: Id<"album">[] = Array.from(
+      new Set(
+        jobs
+          .map((j) => j.context?.albumId as Id<"album"> | undefined)
+          .filter((x): x is Id<"album"> => Boolean(x))
+      )
+    );
+
+    const albums =
+      albumIds.length > 0
+        ? await ctx.runQuery(internal.db.getAlbumsByIds, { albumIds })
+        : [];
+
+    const artistIds: Id<"artist">[] = Array.from(
+      new Set(
+        albums
+          .map((a) => a.primary_artist_id as Id<"artist"> | undefined)
+          .filter((x): x is Id<"artist"> => Boolean(x))
+      )
+    );
+
+    const artists =
+      artistIds.length > 0
+        ? await ctx.runQuery(api.db.getArtistsByIds, { artistIds })
+        : [];
+
+    return { jobs, albums, artists };
   },
 });
 
