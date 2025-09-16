@@ -1,4 +1,5 @@
 import React from "react";
+import { Badge } from "@/components/ui/badge";
 import {
   useReactTable,
   getCoreRowModel,
@@ -18,7 +19,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "./ui/card";
+} from "../ui/card";
 
 function SpotifyIcon({ className }: { className?: string }) {
   return (
@@ -165,7 +166,12 @@ export default function SearchResultsTable({
                 <span className="inline-flex items-center gap-1">
                   {row.getValue("name")}
                   {row.original.explicit && (
-                    <ExplicitIcon className="h-5 w-5 opacity-90" />
+                    <Badge
+                      variant="secondary"
+                      className="text-xs px-1.5 py-0.5"
+                    >
+                      E
+                    </Badge>
                   )}
                 </span>
                 {adding[statusKey(row.original)] === "adding" && (

@@ -168,16 +168,19 @@ export const getAlbumDetails = query({
     );
 
     const tracksWithLyrics: Array<{
+      artist: Doc<"artist"> | null;
       track: Doc<"track">;
       lyric_variants: Array<Doc<"lyric_variant">>;
     }> = [];
     for (const tr of tracks) {
       if (!tr) continue;
+      const artist = await ctx.db.get(tr.primary_artist_id);
       const variants = await ctx.db
         .query("lyric_variant")
         .withIndex("by_track_id", (q) => q.eq("track_id", tr._id))
         .collect();
       tracksWithLyrics.push({
+        artist: artist ?? null,
         track: tr,
         lyric_variants: variants ?? [],
       });

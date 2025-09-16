@@ -3,20 +3,6 @@ import { MutationCtx } from "../_generated/server";
 import { LyricResponse } from "../utils/typings";
 import { hashLyrics } from "../utils/helpers";
 
-/**
- * Upsert a lyric variant for a track.
- *
- * Behavior:
- * - Computes a normalized `text_hash` using the project's `hashLyrics` helper.
- * - If a variant for the same (track_id, source) exists:
- *   - If `forceOverwrite` is true: overwrite the existing lyrics, update text_hash,
- *     increment version if hash changed, set last_crawled_at and processed_status=false.
- *   - Else if the existing `text_hash` equals the new `text_hash`: touch `last_crawled_at` and optionally update url.
- *   - Else (hash differs): increment version, store new lyrics, update text_hash, last_crawled_at, processed_status=false.
- * - If no existing variant, insert a new lyric_variant row.
- *
- * Returns the Id<"lyric_variant"> of the affected variant.
- */
 export async function upsertLyricVariant(
   ctx: MutationCtx,
   {

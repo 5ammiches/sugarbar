@@ -9,6 +9,7 @@ type AlbumCardAlbum = {
   _id?: string;
   title?: string;
   images?: string[];
+  flags?: { hasExplicit: boolean; hasLyrics: boolean; hasAudio: boolean };
   // Optional artist fields; pass one of these from callers if available
   artistName?: string;
   primary_artist_name?: string;
@@ -46,7 +47,7 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
   const artist =
     album.artistName ?? album.primary_artist_name ?? "Unknown Artist";
 
-  const hasExplicitTracks = false; // Future: compute if track data is available
+  const hasExplicitTracks = album?.flags ? album.flags.hasExplicit : false;
 
   const cover =
     (Array.isArray(album.images) && album.images[0]) ||
@@ -74,7 +75,6 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
     >
       <CardContent className="p-0">
         <div className="relative aspect-square overflow-hidden rounded-t-lg">
-          {/* eslint-disable-next-line jsx-a11y/alt-text */}
           <img
             src={cover}
             alt={`${album.title ?? "Album"} album cover`}
@@ -87,6 +87,14 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
           <div className="space-y-1">
             <h3 className="font-semibold text-sm leading-tight line-clamp-2 text-balance">
               {album.title ?? "Unknown Album"}
+              {hasExplicitTracks && (
+                <Badge
+                  variant="secondary"
+                  className="text-xs px-1.5 py-0.5 ml-2"
+                >
+                  E
+                </Badge>
+              )}
             </h3>
             <p className="text-sm text-muted-foreground line-clamp-1">
               {artist}
@@ -97,7 +105,6 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
             <span>
               {formatDate(album.release_date)} ·{" "}
               {Number(album.total_tracks ?? 0)} tracks
-              {hasExplicitTracks ? " · E" : ""}
               {album.edition_tag ? ` · ${album.edition_tag}` : ""}
             </span>
           </div>
