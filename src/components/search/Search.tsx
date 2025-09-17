@@ -1,21 +1,12 @@
 import { api } from "@/../convex/_generated/api";
 import { Album } from "@/../convex/utils/typings";
-import {
-  Route as SearchRoute,
-  type SearchParams,
-} from "@/routes/_dashboard/index";
-import { useConvex } from "convex/react";
+import { Route as SearchRoute, type SearchParams } from "@/routes/_dashboard/index";
+import { useConvex } from "@convex-dev/react-query";
 import React from "react";
 import SearchResultsTable, { type SearchRow } from "./SearchResultsTable";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -31,9 +22,9 @@ import { convexQuery } from "@convex-dev/react-query";
 
 const searchTypes = [
   { value: "album", label: "Albums" },
-  { value: "artist", label: "Artists" },
-  { value: "track", label: "Tracks" },
-  { value: "playlist", label: "Playlists" },
+  // { value: "artist", label: "Artists" },
+  // { value: "track", label: "Tracks" },
+  // { value: "playlist", label: "Playlists" },
 ];
 
 export default function Search() {
@@ -71,9 +62,7 @@ export default function Search() {
 
   const mapAlbumsToRows = React.useCallback((albums: Album[]): SearchRow[] => {
     return (albums ?? []).map((al, idx) => {
-      const spotifyId = al?.metadata?.provider_ids?.spotify as
-        | string
-        | undefined;
+      const spotifyId = al?.metadata?.provider_ids?.spotify as string | undefined;
       const primaryArtist = al?.primary_artist?.name ?? "Unknown Artist";
       const title = al?.title ?? "Unknown";
       const releaseDate = al?.release_date ?? "";
@@ -120,9 +109,7 @@ export default function Search() {
     (row.spotifyId && String(row.spotifyId)) || String(row.id);
 
   const handleAddSelectedAlbums = async () => {
-    const albumsToAdd = searchResults.filter((album) =>
-      selectedAlbums.includes(album.id)
-    );
+    const albumsToAdd = searchResults.filter((album) => selectedAlbums.includes(album.id));
     if (albumsToAdd.length === 0) return;
 
     setAdding((prev) => {
@@ -168,117 +155,135 @@ export default function Search() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Search Spotify Content</CardTitle>
-          <CardDescription>
-            Search for albums, artists, tracks, or playlists to add to your
-            pipeline
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1 flex gap-2">
-              <Input
-                placeholder="Search for albums, artists, tracks..."
-                value={qDraft}
-                onChange={(e) => setQDraft(e.target.value)}
-                className="flex-1"
-                onKeyDown={onKeyDown}
-              />
-              <Select
-                value={typeDraft}
-                onValueChange={(val) => setTypeDraft(val as SearchType)}
-              >
-                <SelectTriggerComponent className="w-32">
-                  <SelectValueComponent />
-                </SelectTriggerComponent>
-                <SelectContentComponent>
-                  {searchTypes.map((type) => (
-                    <SelectItemComponent key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItemComponent>
-                  ))}
-                </SelectContentComponent>
-              </Select>
-            </div>
-            <Button
-              onClick={submitSearch}
-              disabled={isSearching || !qDraft.trim()}
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              {isSearching ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2" />
-                  Searching...
-                </>
-              ) : (
-                <>
-                  <SearchIcon className="h-4 w-4 mr-2" />
-                  Search
-                </>
-              )}
-            </Button>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        <div className="space-y-8">
+          {/* Header */}
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight text-balance">Search & Discover</h1>
+            <p className="text-muted-foreground">
+              Search Spotify's catalog and add albums to your processing pipeline (
+              {searchResults.length} results)
+            </p>
           </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Search Results</CardTitle>
-              <CardDescription>
-                Click on an album name to view details, or select albums to add
-                to your pipeline
-              </CardDescription>
-            </div>
-            {selectedAlbums.length > 0 && (
-              <Button
-                onClick={handleAddSelectedAlbums}
-                className="flex items-center gap-2 cursor-pointer"
-                disabled={selectedAlbums.length === 0}
-                title={
-                  selectedAlbums.length === 0
-                    ? "Select rows to add"
-                    : "Add selected to pipeline"
-                }
-              >
-                {selectedAlbums.length > 0 &&
-                selectedAlbums.some((id) => {
-                  const row = searchResults.find((r) => r.id === id);
-                  const k = row ? statusKey(row) : id;
-                  return adding[k] === "adding";
-                }) ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Adding Selected…
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4" />
-                    Add Selected ({selectedAlbums.length})
-                  </>
+          {/* Search Card */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="border-b bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Search Spotify</CardTitle>
+                  <CardDescription>Find albums, artists, tracks, and playlists</CardDescription>
+                </div>
+                <SearchIcon className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 flex flex-col sm:flex-row gap-2">
+                  <Input
+                    placeholder="Search for albums, artists, tracks..."
+                    value={qDraft}
+                    onChange={(e) => setQDraft(e.target.value)}
+                    className="flex-1 h-10"
+                    onKeyDown={onKeyDown}
+                  />
+                  <Select
+                    value={typeDraft}
+                    onValueChange={(val) => setTypeDraft(val as SearchType)}
+                  >
+                    <SelectTriggerComponent className="w-full sm:w-40 h-10">
+                      <SelectValueComponent />
+                    </SelectTriggerComponent>
+                    <SelectContentComponent>
+                      {searchTypes.map((type) => (
+                        <SelectItemComponent key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItemComponent>
+                      ))}
+                    </SelectContentComponent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={submitSearch}
+                  disabled={isSearching || !qDraft.trim()}
+                  className="h-10 px-6"
+                >
+                  {isSearching ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Searching...
+                    </>
+                  ) : (
+                    <>
+                      <SearchIcon className="h-4 w-4 mr-2" />
+                      Search
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Results Card */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="border-b bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Search Results</CardTitle>
+                  <CardDescription>
+                    Select albums to add to your processing pipeline
+                  </CardDescription>
+                </div>
+                {selectedAlbums.length > 0 && (
+                  <Button
+                    onClick={handleAddSelectedAlbums}
+                    className="h-10 bg-emerald-600 hover:bg-emerald-700"
+                    disabled={selectedAlbums.length === 0}
+                    title={
+                      selectedAlbums.length === 0
+                        ? "Select rows to add"
+                        : "Add selected to pipeline"
+                    }
+                  >
+                    {selectedAlbums.length > 0 &&
+                    selectedAlbums.some((id) => {
+                      const row = searchResults.find((r) => r.id === id);
+                      const k = row ? statusKey(row) : id;
+                      return adding[k] === "adding";
+                    }) ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Adding Selected…
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Selected ({selectedAlbums.length})
+                      </>
+                    )}
+                  </Button>
                 )}
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <SearchResultsTable
-            data={searchResults}
-            adding={adding}
-            setAdding={setAdding}
-            selectedAlbums={selectedAlbums}
-            setSelectedAlbums={setSelectedAlbums}
-            selectedAlbum={selectedAlbum}
-            setSelectedAlbum={setSelectedAlbum}
-            onAddAlbum={addAlbumToPipeline}
-            onAddSelected={handleAddSelectedAlbums}
-          />
-        </CardContent>
-      </Card>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <SearchResultsTable
+                data={searchResults}
+                adding={adding}
+                setAdding={setAdding}
+                selectedAlbums={selectedAlbums}
+                setSelectedAlbums={setSelectedAlbums}
+                selectedAlbum={selectedAlbum}
+                setSelectedAlbum={setSelectedAlbum}
+                onAddAlbum={addAlbumToPipeline}
+                onAddSelected={handleAddSelectedAlbums}
+                isSearching={isSearching}
+                searchQuery={searchQuery}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

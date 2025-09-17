@@ -20,7 +20,6 @@ function shortId(id?: string) {
   return id.length > 9 ? `${id.slice(0, 15)}…` : id;
 }
 
-// TODO fix workflow ID not being found when syncing on album drawer @AlbumReviewDrawer
 export default function AlbumCell({
   albumTitle,
   artistName,
@@ -118,7 +117,7 @@ export default function AlbumCell({
                 }}
               >
                 {wfCopied ? (
-                  <span className="inline-flex items-center gap-1 text-emerald-400 animate-in fade-in zoom-in duration-150">
+                  <span className="inline-flex items-center gap-1 text-emerald-400 animate-in fade-in">
                     <Check className="h-3 w-3" />
                     copied
                   </span>
@@ -150,7 +149,7 @@ export default function AlbumCell({
                   }}
                 >
                   {albCopied ? (
-                    <span className="inline-flex items-center gap-1 text-emerald-400 animate-in fade-in zoom-in duration-150">
+                    <span className="inline-flex items-center gap-1 text-emerald-400 animate-in fade-in">
                       <Check className="h-3 w-3" />
                       copied
                     </span>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery } from "@tanstack/react-query";
+import { convexQuery } from "@convex-dev/react-query";
 import { api } from "@/../convex/_generated/api";
 import { Doc, Id } from "@/../convex/_generated/dataModel";
 import { Input } from "@/components/ui/input";
@@ -63,13 +64,14 @@ export function AlbumFilters({
     return Array.from(years).sort((a, b) => b - a);
   }, [albums]);
 
+  // TODO update for genres
   const availableGenres = useMemo(() => {
     const genres = new Set<string>();
-    for (const album of albums ?? []) {
-      for (const g of album.genre_tags ?? []) {
-        genres.add(g);
-      }
-    }
+    // for (const album of albums ?? []) {
+    //   for (const g of album.genre_tags ?? []) {
+    //     genres.add(g);
+    //   }
+    // }
     return Array.from(genres).sort();
   }, [albums]);
 

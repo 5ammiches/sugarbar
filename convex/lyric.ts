@@ -17,13 +17,6 @@ function makeLyrics(endpoint?: string) {
 
 const vLyricsSource = v.union(...LYRIC_SOURCES.map((s) => v.literal(s)));
 
-/**
- * Try to fetch lyrics from the configured external providers for a given
- * normalized title/artist. We attempt a small set of normalized title variants
- * so we can handle punctuation/apostrophe variations.
- *
- * Returns the provider response (LyricResponse) on success or throws.
- */
 export const getLyricsByTrack = internalAction({
   args: {
     source: vLyricsSource,
@@ -41,11 +34,7 @@ export const getLyricsByTrack = internalAction({
 
     for (const titleVariant of titleVariants) {
       try {
-        const lyric = await client.getLyricsByTrack(
-          args.source,
-          titleVariant,
-          artist
-        );
+        const lyric = await client.getLyricsByTrack(args.source, titleVariant, artist);
 
         if (lyric && lyric.lyrics && lyric.lyrics.length > 0) {
           return lyric;
@@ -143,5 +132,90 @@ export const fetchLyrics = action({
       forceOverwrite,
     });
     return result;
+  },
+});
+
+export const fetchLyricsWithCustomQuery = action({
+  args: {
+    trackId: v.id("track"),
+    customTitle: v.string(),
+    customArtist: v.string(),
+    forceOverwrite: v.optional(v.boolean()),
+  },
+  handler: async (
+    ctx,
+    { trackId, customTitle, customArtist, forceOverwrite }
+  ): Promise<boolean> => {
+    const result = await ctx.runAction(internal.lyric.fetchLyricsInternalWithCustomQuery, {
+      trackId,
+      customTitle,
+      customArtist,
+      forceOverwrite,
+    });
+    return result;
+  },
+});
+
+export const fetchLyricsInternalWithCustomQuery = internalAction({
+  args: {
+    trackId: v.id("track"),
+    customTitle: v.string(),
+    customArtist: v.string(),
+    forceOverwrite: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { trackId, customTitle, customArtist, forceOverwrite }) => {
+    const track = await ctx.runQuery(internal.db.getTrack, { trackId });
+    if (!track) return false;
+
+    if (track.lyrics_fetched_status !== "fetching") {
+      await ctx.runMutation(internal.db.updateTrackLyricStatus, {
+        trackId,
+        status: "fetching",
+      });
+    }
+
+    const sources: LyricSource[] = ["genius", "musixmatch"];
+    let gotLyrics = false;
+
+    for (const source of sources) {
+      try {
+        const lyric = await ctx.runAction(internal.lyric.getLyricsByTrack, {
+          source,
+          title: customTitle.trim(),
+          artist: customArtist.trim(),
+        });
+
+        if (!lyric || !lyric.lyrics) continue;
+
+        try {
+          await ctx.runMutation(internal.db.upsertLyricVariant, {
+            trackId: trackId,
+            lyric: lyric,
+            forceOverwrite: !!forceOverwrite,
+          });
+        } catch (e) {
+          console.error("upsertLyricVariant failed", e);
+        }
+
+        await ctx.runMutation(internal.db.updateTrackLyricStatus, {
+          trackId,
+          status: "fetched",
+        });
+
+        gotLyrics = true;
+        break;
+      } catch (e) {
+        // Try next source
+      }
+    }
+
+    if (!gotLyrics) {
+      await ctx.runMutation(internal.db.updateTrackLyricStatus, {
+        trackId,
+        status: "failed",
+      });
+    }
+
+    return gotLyrics;
   },
 });

@@ -103,8 +103,6 @@ export function normalizeAlbumTitle(raw: string): NormalizedAlbum {
 
 /**
  * normalizeText now accepts an optional keepQuotes flag.
- * If keepQuotes is true, typographic quotes/apostrophes are normalized to ASCII
- * but preserved so callers can build variants that include apostrophes.
  * Default behaviour (keepQuotes=false) preserves existing behaviour and strips quotes.
  */
 export function normalizeText(s: string, keepQuotes: boolean = false) {
@@ -241,14 +239,6 @@ export function normalizeLyricsForHash(
   t = t.replace(/\bpre[\s-]?chorus\b/gi, "pre-chorus");
   t = t.replace(/\bpost[\s-]?chorus\b/gi, "post-chorus");
 
-  // Canonicalize lines that are section headers.
-  // Your API outputs headers as "### <section text>" or "[...]" already normalized to "### <...>".
-  // We’ll match any line that is effectively a header and replace with SECTION:<label> [num].
-  const headerRegex = new RegExp(
-    String.raw`^\s*(?:#+\s*)?(?:\[\s*)?(?:${SECTION_ALT})\s*(\d+)?(?:\s*[\]:].*)?$`,
-    "i"
-  );
-
   const lines = t.split(/\r?\n/);
   const out: string[] = [];
 
@@ -365,4 +355,53 @@ export function generateTitleVariantsForLyrics(s: string): string[] {
     if (v && !variants.includes(v)) variants.push(v);
   }
   return variants;
+}
+
+/**
+ * Genre / comparison helpers
+ * Normalize a string for comparison/lookup.
+ * Example: "  Hip-Hop/R&B " -> "hip hop r and b" (after diacritic folding and replacements)
+ */
+export function normalizeForCompare(name: string): string {
+  if (!name) return "";
+
+  let s = name.trim();
+
+  s = s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+
+  s = s.toLowerCase();
+
+  s = s.replace(/&/g, "and");
+
+  s = s.replace(/[._-]/g, " ");
+
+  s = s.replace(/\s+/g, " ").trim();
+
+  return s;
+}
+
+/**
+ * Slugify a string for machine-friendly identifiers.
+ * Example: "Hip-Hop & R&B" -> "hip-hop-and-rb"
+ */
+export function slugify(name: string): string {
+  if (!name) return "";
+
+  let s = name.trim();
+
+  s = s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+
+  s = s.toLowerCase();
+
+  s = s.replace(/&/g, "and");
+
+  s = s.replace(/[^a-z0-9\s-]/g, "");
+
+  s = s.replace(/\s+/g, "-");
+
+  s = s.replace(/-+/g, "-");
+
+  s = s.replace(/^-+|-+$/g, "");
+
+  return s;
 }
