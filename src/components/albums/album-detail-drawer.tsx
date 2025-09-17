@@ -3,7 +3,8 @@
 import { api } from "@/../convex/_generated/api";
 import { Doc, Id } from "@/../convex/_generated/dataModel";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { useQuery } from "convex/react";
+import { useQuery } from "@tanstack/react-query";
+import { convexQuery } from "@convex-dev/react-query";
 import React, { useMemo } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -173,10 +174,10 @@ export function AlbumDetailDrawer({
   open,
   onClose,
 }: AlbumDetailDrawerProps) {
-  const details = useQuery(
-    api.db.getAlbumDetails,
-    albumId ? { albumId } : "skip"
-  ) as AlbumDetailsResponse;
+  const { data: details } = useQuery({
+    ...convexQuery(api.db.getAlbumDetails, albumId ? { albumId } : "skip"),
+    enabled: !!albumId,
+  }) as { data: AlbumDetailsResponse };
 
   const [cachedDetails, setCachedDetails] =
     React.useState<AlbumDetailsResponse | null>(null);
@@ -319,13 +320,15 @@ function DrawerBody({
             </div>
 
             <div className="flex flex-wrap gap-1">
-              {(Array.isArray(album.genre_tags) ? album.genre_tags : [])
+              {/*TODO updae for genre tags*/}
+              {/*{(Array.isArray(album.genre_tags) ? album.genre_tags : [])
                 .slice(0, 6)
                 .map((g) => (
                   <Badge key={g} variant="secondary" className="text-xs">
                     {g}
                   </Badge>
-                ))}
+                ))}*/}
+
               {album.edition_tag && (
                 <Badge variant="outline" className="text-xs">
                   {album.edition_tag}

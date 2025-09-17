@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery } from "@tanstack/react-query";
+import { convexQuery, useConvex } from "@convex-dev/react-query";
 import { api } from "@/../convex/_generated/api";
 import { Doc, Id } from "@/../convex/_generated/dataModel";
 
@@ -31,8 +32,9 @@ export default function AlbumGallery() {
     sortBy: "newest",
   });
 
-  const approvedAlbums =
-    (useQuery(api.db.getApprovedAlbums) as AlbumDoc[] | undefined) ?? [];
+  const { data: approvedAlbums = [] } = useQuery({
+    ...convexQuery(api.db.getApprovedAlbums, {}),
+  }) as { data: AlbumDoc[] };
 
   const albumIds = useMemo(
     () => approvedAlbums.map((a) => a._id),
@@ -40,11 +42,10 @@ export default function AlbumGallery() {
   );
 
   // Content flags (explicit/lyrics/audio) per album
-  const flagList =
-    useQuery(
-      api.db.getAlbumContentFlags,
-      albumIds.length > 0 ? { albumIds } : "skip"
-    ) ?? [];
+  const { data: flagList = [] } = useQuery({
+    ...convexQuery(api.db.getAlbumContentFlags, albumIds.length > 0 ? { albumIds } : "skip"),
+    enabled: albumIds.length > 0,
+  });
 
   const flagsMap = useMemo(() => {
     const m = new Map<
@@ -62,11 +63,10 @@ export default function AlbumGallery() {
     return Array.from(new Set(ids));
   }, [approvedAlbums]);
 
-  const artists =
-    useQuery(
-      api.db.getArtistsByIds,
-      primaryArtistIds.length > 0 ? { artistIds: primaryArtistIds } : "skip"
-    ) ?? [];
+  const { data: artists = [] } = useQuery({
+    ...convexQuery(api.db.getArtistsByIds, primaryArtistIds.length > 0 ? { artistIds: primaryArtistIds } : "skip"),
+    enabled: primaryArtistIds.length > 0,
+  });
 
   const artistMap = useMemo(() => {
     const m = new Map<Id<"artist">, Doc<"artist">>();
@@ -92,7 +92,9 @@ export default function AlbumGallery() {
 
       // Genre filters: require all selected genres to be present
       if ((filters.genres?.length ?? 0) > 0) {
-        const set = new Set(album.genre_tags ?? []);
+        // const set = new Set(album.genre_tags ?? []);
+        // TODO update for genre tags
+        const set = new Set();
         for (const g of filters.genres) {
           if (!set.has(g)) return false;
         }

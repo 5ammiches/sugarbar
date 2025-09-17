@@ -3,9 +3,50 @@ import { Doc, Id } from "@/../convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useConvex, useQuery } from "convex/react";
-import { Check, Edit3, RefreshCw, XCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { convexQuery, useConvex } from "@convex-dev/react-query";
+import {
+  Check,
+  Edit3,
+  RefreshCw,
+  XCircle,
+  Calendar,
+  Music,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  User,
+  Disc,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useState } from "react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { normalizeAlbumTitle } from "@/../convex/utils/helpers";
 
 type Props = {
   open: boolean;
@@ -23,6 +64,8 @@ type VariantEditState = {
   [variantId: Id<"lyric_variant">]: Record<string, any>;
 };
 
+type TrackPatch = Record<string, any>;
+
 export default function AlbumReviewDrawer({
   open,
   albumId,
@@ -32,19 +75,27 @@ export default function AlbumReviewDrawer({
 }: Props) {
   const convex = useConvex();
 
-  const details = useQuery(
-    api.db.getAlbumDetails,
-    albumId ? { albumId: albumId as Id<"album"> } : "skip"
-  ) as
-    | {
-        album: Doc<"album">;
-        primaryArtist?: Doc<"artist"> | null;
-        tracks: Array<{
-          track: Doc<"track">;
-          lyric_variants: Array<Doc<"lyric_variant">>;
-        }>;
-      }
-    | undefined;
+  const { data: details } = useQuery({
+    ...convexQuery(
+      api.db.getAlbumDetails,
+      albumId ? { albumId: albumId as Id<"album"> } : "skip"
+    ),
+    enabled: !!albumId,
+    staleTime: 5 * 60 * 1000, // 5 minutes - cache data to make subsequent opens instant
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep data in cache longer
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+  }) as {
+    data:
+      | {
+          album: Doc<"album">;
+          primaryArtist?: Doc<"artist"> | null;
+          tracks: Array<{
+            track: Doc<"track">;
+            lyric_variants: Array<Doc<"lyric_variant">>;
+          }>;
+        }
+      | undefined;
+  };
 
   const [tracksState, setTracksState] = useState<TrackEditState>({});
   const [variantsState, setVariantsState] = useState<VariantEditState>({});
@@ -56,6 +107,26 @@ export default function AlbumReviewDrawer({
   const [retryResult, setRetryResult] = useState<
     Record<Id<"track">, "success" | "failed">
   >({});
+  const [customQueryDialog, setCustomQueryDialog] = useState<{
+    open: boolean;
+    trackId?: Id<"track">;
+    title: string;
+    artist: string;
+  }>({
+    open: false,
+    title: "",
+    artist: "",
+  });
+  const [deletingVariants, setDeletingVariants] = useState<
+    Record<Id<"lyric_variant">, boolean>
+  >({});
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
+    open: boolean;
+    variantId?: Id<"lyric_variant">;
+    source?: string;
+  }>({
+    open: false,
+  });
 
   useEffect(() => {
     if (!details) {
@@ -65,6 +136,9 @@ export default function AlbumReviewDrawer({
       setRetrying({});
       setLiveVariantLyrics({});
       setRetryResult({});
+      setCustomQueryDialog({ open: false, title: "", artist: "" });
+      setDeletingVariants({});
+      setDeleteConfirmDialog({ open: false });
       return;
     }
     const initTracks: TrackEditState = {};
@@ -93,13 +167,25 @@ export default function AlbumReviewDrawer({
 
   const handleTrackChange = (
     trackId: Id<"track">,
-    field: string,
-    value: any
+    fieldOrPatch: string | TrackPatch,
+    value?: any
   ): void => {
-    setTracksState((prev) => ({
-      ...prev,
-      [trackId]: { ...(prev[trackId] ?? {}), [field]: value },
-    }));
+    setTracksState((prev) => {
+      const prevTrack = prev[trackId] ?? {};
+
+      const patch: TrackPatch =
+        typeof fieldOrPatch === "string"
+          ? { [fieldOrPatch]: value }
+          : fieldOrPatch;
+
+      return {
+        ...prev,
+        [trackId]: {
+          ...prevTrack,
+          ...patch,
+        },
+      };
+    });
   };
 
   const handleVariantChange = (
@@ -169,8 +255,161 @@ export default function AlbumReviewDrawer({
     } catch (e) {
       console.error("Failed to save track/variants", e);
     } finally {
-      // Done saving this track
       setSavingTracks((s) => ({ ...s, [trackId]: false }));
+    }
+  };
+
+  const openCustomQueryDialog = (trackId: Id<"track">) => {
+    const trackEntry = details?.tracks.find((t) => t.track._id === trackId);
+    const track = trackEntry?.track;
+    if (!track) return;
+
+    const primaryArtist = details?.primaryArtist;
+    setCustomQueryDialog({
+      open: true,
+      trackId,
+      title: track.title ?? "",
+      artist: primaryArtist?.name ?? "",
+    });
+  };
+
+  const handleCustomRetry = async () => {
+    const { trackId, title, artist } = customQueryDialog;
+    if (!trackId || !title.trim() || !artist.trim()) return;
+
+    setCustomQueryDialog({ open: false, title: "", artist: "" });
+    await retryLyricsWithCustomQuery(trackId, title.trim(), artist.trim());
+  };
+
+  const openDeleteConfirmDialog = (
+    variantId: Id<"lyric_variant">,
+    source?: string
+  ) => {
+    setDeleteConfirmDialog({
+      open: true,
+      variantId,
+      source,
+    });
+  };
+
+  const handleDeleteVariant = async () => {
+    const { variantId } = deleteConfirmDialog;
+    if (!variantId) return;
+
+    setDeleteConfirmDialog({ open: false });
+    setDeletingVariants((prev) => ({ ...prev, [variantId]: true }));
+
+    try {
+      await convex.mutation(api.db.deleteLyricVariant, {
+        lyricVariantId: variantId,
+      });
+
+      // Remove from local state
+      setLiveVariantLyrics((prev) => {
+        const copy = { ...prev };
+        delete copy[variantId];
+        return copy;
+      });
+
+      setVariantsState((prev) => {
+        const copy = { ...prev };
+        delete copy[variantId];
+        return copy;
+      });
+    } catch (e) {
+      console.error("Failed to delete lyric variant", e);
+    } finally {
+      setDeletingVariants((prev) => ({ ...prev, [variantId]: false }));
+    }
+  };
+
+  const retryLyricsWithCustomQuery = async (
+    trackId: Id<"track">,
+    customTitle: string,
+    customArtist: string
+  ) => {
+    setRetrying((r) => ({ ...r, [trackId]: true }));
+    setRetryResult((r) => {
+      const copy = { ...r };
+      delete copy[trackId];
+      return copy;
+    });
+
+    try {
+      try {
+        await convex.action(api.lyric.fetchLyricsWithCustomQuery, {
+          trackId,
+          customTitle,
+          customArtist,
+          forceOverwrite: true,
+        });
+      } catch (e) {
+        console.error("Trigger custom lyric fetch failed", e);
+      }
+
+      if (!albumId) {
+        setRetryResult((r) => ({ ...r, [trackId]: "failed" }));
+        return;
+      }
+
+      const maxAttempts = 10;
+      const delayMs = 1000;
+      let foundAny = false;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        await new Promise((res) => setTimeout(res, delayMs));
+        try {
+          const refreshed = await convex.query(api.db.getAlbumDetails, {
+            albumId,
+          });
+          if (!refreshed || !refreshed.tracks) continue;
+
+          const found = refreshed.tracks.find(
+            (tr: any) => tr.track._id === trackId
+          );
+          if (!found) continue;
+
+          const variants = found.lyric_variants ?? [];
+          const updates: Record<Id<"lyric_variant">, string> = {};
+
+          for (const v of variants) {
+            if (v.lyrics) {
+              updates[v._id] = v.lyrics;
+              foundAny = true;
+
+              try {
+                const localPatch = variantsState[v._id] ?? {};
+                const hasLocalUnsavedEdits = Object.keys(localPatch).length > 0;
+                if (!hasLocalUnsavedEdits) {
+                  await convex.mutation(api.db.updateLyricVariant, {
+                    lyricVariantId: v._id,
+                    patch: { lyrics: v.lyrics },
+                  });
+                }
+              } catch (e) {
+                console.error("Failed to force-write provider lyrics to DB", e);
+              }
+            }
+          }
+
+          if (foundAny) {
+            setLiveVariantLyrics((prev) => ({ ...prev, ...updates }));
+            setRetryResult((r) => ({ ...r, [trackId]: "success" }));
+            break;
+          }
+        } catch (e) {
+          console.error("Polling album details failed", e);
+        }
+      }
+
+      if (!foundAny) {
+        setRetryResult((r) => ({ ...r, [trackId]: "failed" }));
+      }
+    } catch (e) {
+      console.error("Retry fetch failed", e);
+      setRetryResult((r) => ({ ...r, [trackId]: "failed" }));
+    } finally {
+      setRetrying((r) => ({ ...r, [trackId]: false }));
     }
   };
 
@@ -209,7 +448,9 @@ export default function AlbumReviewDrawer({
           });
           if (!refreshed || !refreshed.tracks) continue;
 
-          const found = refreshed.tracks.find((tr) => tr.track._id === trackId);
+          const found = refreshed.tracks.find(
+            (tr: any) => tr.track._id === trackId
+          );
           if (!found) continue;
 
           const variants = found.lyric_variants ?? [];
@@ -299,343 +540,702 @@ export default function AlbumReviewDrawer({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex"
-      aria-hidden={open ? "false" : "true"}
-      role="dialog"
-    >
-      {/* overlay */}
-      <div
-        className="fixed inset-0 bg-black/40 z-40"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+    <Sheet open={open} onOpenChange={onClose}>
+      <SheetContent
+        side="right"
+        aria-describedby={undefined}
+        className="w-full sm:max-w-4xl p-0"
+        style={{ backgroundColor: "var(--background)" }}
+      >
+        <VisuallyHidden asChild>
+          <SheetTitle>{details?.album?.title ?? "Album Review"}</SheetTitle>
+        </VisuallyHidden>
 
-      {/* drawer panel */}
-      <aside className="ml-auto w-full max-w-3xl bg-background text-foreground shadow-xl relative z-50 h-full max-h-screen overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b">
-          <div>
-            <h3 className="text-xl font-semibold">
-              {details?.album?.title ?? "Album"}
-            </h3>
-            <div className="text-sm text-muted-foreground">
-              {details?.primaryArtist?.name ?? "-"} —{" "}
-              {details?.album?.release_date ?? "-"}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="destructive"
-              onClick={handleReject}
-              disabled={
-                status === "queued" ||
-                status === "in_progress" ||
-                status === "rejected" ||
-                status === "canceled" ||
-                status === "failed"
-              }
-            >
-              <XCircle className="h-4 w-4 mr-2" />
-              Reject
-            </Button>
-
-            <Button
-              variant="default"
-              onClick={handleApprove}
-              disabled={
-                status === "queued" ||
-                status === "in_progress" ||
-                status === "approved" ||
-                status === "canceled" ||
-                status === "failed"
-              }
-            >
-              <Check className="h-4 w-4 mr-2" />
-              Approve
-            </Button>
-
-            <Button
-              variant="ghost"
-              onClick={() => {
-                onClose();
-              }}
-            >
-              Close
-            </Button>
-          </div>
-        </div>
-
-        <div className="p-4 space-y-6">
-          {/* Album metadata */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="col-span-1">
-              {details?.album?.images?.[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={details.album.images?.[0]}
-                  alt={details.album.title ?? "Album cover"}
-                  className="w-48 h-48 object-cover rounded"
-                />
-              ) : (
-                <div className="w-48 h-48 bg-muted rounded flex items-center justify-center text-sm text-muted-foreground">
-                  No cover
-                </div>
-              )}
-            </div>
-
-            <div className="col-span-2 space-y-2">
-              <div>
-                <div className="text-sm text-muted-foreground">Album</div>
-                <div className="text-lg font-medium">
-                  {details?.album?.title}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Artist</div>
-                <div className="text-base">{details?.primaryArtist?.name}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Metadata</div>
-                <pre className="text-xs rounded bg-muted/10 p-2 overflow-auto max-h-28">
-                  {JSON.stringify(details?.album?.metadata ?? {}, null, 2)}
-                </pre>
+        <ScrollArea className="h-full">
+          {!details ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center space-y-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="text-sm text-muted-foreground">
+                  Loading album details...
+                </p>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-6 space-y-6 text-foreground">
+              {/* Header */}
+              <SheetHeader className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="relative w-32 h-32 rounded-lg overflow-hidden flex-shrink-0">
+                    <img
+                      src={
+                        details?.album?.images?.[0] ||
+                        `/placeholder.svg?height=300&width=300&query=album cover for ${encodeURIComponent(
+                          details?.album?.title ?? "album"
+                        )}`
+                      }
+                      alt={details?.album?.title ?? "Album cover"}
+                      className="object-cover w-full h-full"
+                    />
+                  </div>
 
-          {/* Tracks list */}
-          <div>
-            <h4 className="text-lg font-semibold mb-2">Tracks</h4>
-            <div className="space-y-4">
-              {tracks.length === 0 && (
-                <div className="text-muted-foreground">No tracks found</div>
-              )}
+                  <div className="flex-1 space-y-3">
+                    <SheetTitle className="text-2xl font-bold text-balance leading-tight">
+                      {details?.album?.title ?? "Album Review"}
+                    </SheetTitle>
+                    <p className="text-lg text-muted-foreground">
+                      {details?.primaryArtist?.name ?? "Unknown Artist"}
+                    </p>
 
-              {tracks.map((entry) => {
-                const t = entry.track;
-                const variants = entry.lyric_variants ?? [];
-                const needsAttention = trackNeedsAttention(entry);
-                const trackPatch = tracksState[t._id] ?? {};
-                const saving = !!savingTracks[t._id];
-
-                return (
-                  <div key={t._id} className="border rounded p-3 bg-surface/50">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 text-sm text-muted-foreground">
-                            {t.track_number ?? "-"}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <input
-                              className="w-full bg-transparent border-b pb-1 focus:outline-none"
-                              value={
-                                trackPatch.title !== undefined
-                                  ? trackPatch.title
-                                  : t.title ?? ""
-                              }
-                              onChange={(e) =>
-                                handleTrackChange(
-                                  t._id,
-                                  "title",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Track title"
-                            />
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {t.primary_artist_id
-                                ? "Primary artist track"
-                                : ""}
-                            </div>
-                          </div>
-
-                          {(() => {
-                            const ls =
-                              (t.lyrics_fetched_status as string | undefined) ??
-                              undefined;
-                            if (ls === "failed") {
-                              return (
-                                <Badge variant={"destructive" as any}>
-                                  Lyrics failed
-                                </Badge>
-                              );
-                            }
-                            if (ls === "fetching") {
-                              return (
-                                <Badge variant={"secondary" as any}>
-                                  Fetching lyrics
-                                </Badge>
-                              );
-                            }
-                            if (ls === "fetched") {
-                              return (
-                                <Badge variant={"default" as any}>
-                                  Lyrics fetched
-                                </Badge>
-                              );
-                            }
-                            // fallback: if there is no status but the track otherwise needs attention, show attention badge
-                            return needsAttention ? (
-                              <Badge variant={"destructive" as any}>
-                                No Lyrics
-                              </Badge>
-                            ) : null;
-                          })()}
-                        </div>
-
-                        <div className="mt-3 flex items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            <div className="text-sm text-muted-foreground">
-                              Duration
-                            </div>
-                            <input
-                              type="number"
-                              className="w-28 bg-transparent border rounded px-2 py-1 text-sm"
-                              value={
-                                trackPatch.duration_ms !== undefined
-                                  ? String(trackPatch.duration_ms)
-                                  : String(t.duration_ms ?? "")
-                              }
-                              onChange={(e) =>
-                                handleTrackChange(
-                                  t._id,
-                                  "duration_ms",
-                                  Number(e.target.value)
-                                )
-                              }
-                              placeholder="ms"
-                            />
-                            <div className="text-xs text-muted-foreground ml-2">
-                              {formatDuration(t.duration_ms)}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <label className="flex items-center gap-2 text-sm">
-                              <Checkbox
-                                checked={
-                                  trackPatch.explicit_flag !== undefined
-                                    ? !!trackPatch.explicit_flag
-                                    : !!t.explicit_flag
-                                }
-                                onCheckedChange={(v) =>
-                                  handleTrackChange(t._id, "explicit_flag", !!v)
-                                }
-                                aria-label="Explicit"
-                              />
-                              <span className="text-sm">Explicit</span>
-                            </label>
-                          </div>
-                        </div>
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>
+                          Released: {details?.album?.release_date ?? "Unknown"}
+                        </span>
                       </div>
-
-                      <div className="flex flex-col items-end gap-2">
-                        <div className="text-xs text-muted-foreground">
-                          {t.isrc ?? ""}
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => retryLyrics(t._id)}
-                              disabled={!!retrying[t._id]}
-                            >
-                              {retrying[t._id] ? (
-                                <>
-                                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                                  Retrying...
-                                </>
-                              ) : (
-                                <>
-                                  <RefreshCw className="h-4 w-4 mr-2" />
-                                  Retry Lyrics
-                                </>
-                              )}
-                            </Button>
-
-                            {/* show small badge for the result of the last retry attempt */}
-                            {retryResult[t._id] === "success" && (
-                              <Badge variant={"default"}>Fetch success</Badge>
-                            )}
-                            {retryResult[t._id] === "failed" && (
-                              <Badge variant={"destructive"}>
-                                Fetch failed
-                              </Badge>
-                            )}
-
-                            <Button
-                              size="sm"
-                              variant="default"
-                              onClick={() => saveTrack(t._id)}
-                              disabled={!!savingTracks[t._id]}
-                            >
-                              <Edit3 className="h-4 w-4 mr-2" />
-                              {savingTracks[t._id] ? "Saving..." : "Save"}
-                            </Button>
+                      {details?.tracks && (
+                        <>
+                          <span>•</span>
+                          <div className="flex items-center gap-1">
+                            <Music className="h-4 w-4" />
+                            <span>{details.tracks.length} tracks</span>
                           </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Lyric variants */}
-                    <div className="mt-3 space-y-2">
-                      <div className="text-sm text-muted-foreground mb-1">
-                        Lyric Variants
-                      </div>
-
-                      {variants.length === 0 && (
-                        <div className="text-sm text-muted-foreground">
-                          No lyric variants
-                        </div>
+                        </>
                       )}
-
-                      {variants.map((v) => {
-                        const varPatch = variantsState[v._id] ?? {};
-                        return (
-                          <div
-                            key={v._id}
-                            className="border rounded p-2 bg-background/50"
-                          >
-                            <div className="text-xs text-muted-foreground mb-1">
-                              Source: {v.source ?? "unknown"} • Crawled:{" "}
-                              {v.last_crawled_at
-                                ? new Date(v.last_crawled_at).toLocaleString()
-                                : "unknown"}
-                            </div>
-                            <textarea
-                              className="w-full bg-transparent border rounded p-2 min-h-[80px] text-sm"
-                              value={
-                                typeof varPatch.lyrics !== "undefined"
-                                  ? varPatch.lyrics
-                                  : liveVariantLyrics[v._id] ?? v.lyrics ?? ""
-                              }
-                              onChange={(e) =>
-                                handleVariantChange(
-                                  v._id,
-                                  "lyrics",
-                                  e.target.value
-                                )
-                              }
-                            />
+                      {workflowId && (
+                        <>
+                          <span>•</span>
+                          <div className="flex items-center gap-1">
+                            <Disc className="h-4 w-4" />
+                            <span>Workflow: {workflowId.slice(0, 8)}...</span>
                           </div>
-                        );
-                      })}
+                        </>
+                      )}
                     </div>
                   </div>
-                );
-              })}
+                </div>
+
+                {/* Status and Actions */}
+                <div className="space-y-4">
+                  {/* Current Status */}
+                  <div
+                    className={cn(
+                      "flex items-center gap-2 p-3 rounded-lg border",
+                      status === "pending_review"
+                        ? "bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800"
+                        : status === "approved"
+                        ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                        : status === "rejected"
+                        ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+                        : "bg-secondary dark:bg-secondary/20 border-border"
+                    )}
+                  >
+                    {status === "pending_review" && (
+                      <AlertCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    )}
+                    {status === "approved" && (
+                      <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    )}
+                    {(status === "rejected" || status === "failed") && (
+                      <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                    )}
+                    <span className="text-sm font-medium">
+                      Status: {status?.replace(/_/g, " ") ?? "Unknown"}
+                    </span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="destructive"
+                      onClick={handleReject}
+                      disabled={
+                        status === "queued" ||
+                        status === "in_progress" ||
+                        status === "rejected" ||
+                        status === "canceled" ||
+                        status === "failed"
+                      }
+                      className="h-10"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Reject
+                    </Button>
+
+                    <Button
+                      variant="default"
+                      onClick={handleApprove}
+                      disabled={
+                        status === "queued" ||
+                        status === "in_progress" ||
+                        status === "approved" ||
+                        status === "canceled" ||
+                        status === "failed"
+                      }
+                      className="h-10 bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      Approve
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      onClick={onClose}
+                      className="h-10 ml-auto"
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              </SheetHeader>
+
+              <Separator />
+
+              {/* Tracks Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">
+                    Tracks ({tracks.length})
+                  </h3>
+                </div>
+
+                {tracks.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Music className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No tracks found</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {tracks.map((entry, index) => {
+                      const t = entry.track;
+                      const variants = entry.lyric_variants ?? [];
+                      const needsAttention = trackNeedsAttention(entry);
+                      const trackPatch = tracksState[t._id] ?? {};
+                      const saving = !!savingTracks[t._id];
+
+                      return (
+                        <Card key={t._id} className="overflow-hidden">
+                          <CardHeader className="pb-4">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <span className="text-sm text-muted-foreground w-6 text-right">
+                                  {index + 1}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <input
+                                    className="w-full bg-transparent border-b pb-1 focus:outline-none focus:border-primary text-base font-medium"
+                                    value={
+                                      trackPatch.title !== undefined
+                                        ? trackPatch.title
+                                        : t.title ?? ""
+                                    }
+                                    onChange={(e) => {
+                                      const title = e.target.value;
+                                      const { base_title } =
+                                        normalizeAlbumTitle(title);
+                                      const title_normalized = base_title;
+
+                                      handleTrackChange(t._id, {
+                                        title,
+                                        title_normalized: title_normalized,
+                                      });
+                                    }}
+                                    placeholder="Track title"
+                                  />
+                                  <div className="flex items-center gap-2 mt-1">
+                                    {t.primary_artist_id && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        Primary Artist
+                                      </Badge>
+                                    )}
+                                    {(() => {
+                                      const ls = t.lyrics_fetched_status as
+                                        | string
+                                        | undefined;
+                                      if (ls === "failed") {
+                                        return (
+                                          <Badge
+                                            variant="destructive"
+                                            className="text-xs"
+                                          >
+                                            Lyrics failed
+                                          </Badge>
+                                        );
+                                      }
+                                      if (ls === "fetching") {
+                                        return (
+                                          <Badge
+                                            variant="secondary"
+                                            className="text-xs"
+                                          >
+                                            Fetching lyrics
+                                          </Badge>
+                                        );
+                                      }
+                                      if (ls === "fetched") {
+                                        return (
+                                          <Badge
+                                            variant="default"
+                                            className="text-xs"
+                                          >
+                                            Lyrics fetched
+                                          </Badge>
+                                        );
+                                      }
+                                      return needsAttention ? (
+                                        <Badge
+                                          variant="destructive"
+                                          className="text-xs"
+                                        >
+                                          No Lyrics
+                                        </Badge>
+                                      ) : null;
+                                    })()}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => retryLyrics(t._id)}
+                                  disabled={!!retrying[t._id]}
+                                >
+                                  {retrying[t._id] ? (
+                                    <>
+                                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                      Retrying...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <RefreshCw className="h-4 w-4 mr-2" />
+                                      Retry Lyrics
+                                    </>
+                                  )}
+                                </Button>
+
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => openCustomQueryDialog(t._id)}
+                                  disabled={!!retrying[t._id]}
+                                >
+                                  <Edit3 className="h-4 w-4 mr-2" />
+                                  Custom Query
+                                </Button>
+
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => saveTrack(t._id)}
+                                  disabled={saving}
+                                >
+                                  <Edit3 className="h-4 w-4 mr-2" />
+                                  {saving ? "Saving..." : "Save"}
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Track metadata */}
+                            <div className="flex flex-wrap items-center gap-4 text-sm">
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-muted-foreground" />
+                                <input
+                                  type="number"
+                                  className="w-25 bg-transparent border rounded px-1 py-1 text-sm"
+                                  value={
+                                    trackPatch.duration_ms !== undefined
+                                      ? String(trackPatch.duration_ms)
+                                      : String(t.duration_ms ?? "")
+                                  }
+                                  onChange={(e) =>
+                                    handleTrackChange(
+                                      t._id,
+                                      "duration_ms",
+                                      Number(e.target.value)
+                                    )
+                                  }
+                                  placeholder="ms"
+                                />
+                                <span className="text-muted-foreground">
+                                  ({formatDuration(t.duration_ms)})
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  checked={
+                                    trackPatch.explicit_flag !== undefined
+                                      ? !!trackPatch.explicit_flag
+                                      : !!t.explicit_flag
+                                  }
+                                  onCheckedChange={(v) =>
+                                    handleTrackChange(
+                                      t._id,
+                                      "explicit_flag",
+                                      !!v
+                                    )
+                                  }
+                                  aria-label="Explicit"
+                                />
+                                <span className="text-sm">Explicit</span>
+                              </div>
+
+                              {t.isrc && (
+                                <div className="text-xs text-muted-foreground font-mono">
+                                  ISRC: {t.isrc}
+                                </div>
+                              )}
+
+                              {/* Retry result badges */}
+                              {retryResult[t._id] === "success" && (
+                                <Badge variant="default" className="text-xs">
+                                  Fetch success
+                                </Badge>
+                              )}
+                              {retryResult[t._id] === "failed" && (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs"
+                                >
+                                  Fetch failed
+                                </Badge>
+                              )}
+                            </div>
+                          </CardHeader>
+
+                          {/* Lyrics Section with Tabs */}
+                          {variants.length > 0 && (
+                            <CardContent className="pt-0">
+                              <div className="space-y-3">
+                                <h4 className="text-sm font-medium text-muted-foreground">
+                                  Lyrics ({variants.length} variant
+                                  {variants.length !== 1 ? "s" : ""})
+                                </h4>
+
+                                {variants.length === 1 ? (
+                                  // Single variant - no tabs
+                                  <div
+                                    key={variants[0]._id}
+                                    className="space-y-2"
+                                  >
+                                    <div className="space-y-1">
+                                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                        <div className="flex items-center gap-4">
+                                          <span>
+                                            Source:{" "}
+                                            {variants[0].source ?? "unknown"}
+                                          </span>
+                                          <span>
+                                            Crawled:{" "}
+                                            {variants[0].last_crawled_at
+                                              ? new Date(
+                                                  variants[0].last_crawled_at
+                                                ).toLocaleDateString()
+                                              : "unknown"}
+                                          </span>
+                                        </div>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() =>
+                                            openDeleteConfirmDialog(
+                                              variants[0]._id,
+                                              variants[0].source
+                                            )
+                                          }
+                                          disabled={
+                                            !!deletingVariants[variants[0]._id]
+                                          }
+                                          className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        >
+                                          {deletingVariants[variants[0]._id] ? (
+                                            <RefreshCw className="h-3 w-3 animate-spin" />
+                                          ) : (
+                                            <Trash2 className="h-3 w-3" />
+                                          )}
+                                        </Button>
+                                      </div>
+                                      {variants[0].url && (
+                                        <div className="text-xs text-muted-foreground/50">
+                                          <span className="font-medium">
+                                            URL:
+                                          </span>{" "}
+                                          <a
+                                            href={variants[0].url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-blue-400 hover:text-blue-300 hover:underline break-all"
+                                          >
+                                            {variants[0].url}
+                                          </a>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <textarea
+                                      className="w-full bg-muted/30 border rounded-lg p-3 min-h-[120px] text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                                      value={
+                                        typeof (
+                                          variantsState[variants[0]._id] ?? {}
+                                        ).lyrics !== "undefined"
+                                          ? (
+                                              variantsState[variants[0]._id] ??
+                                              {}
+                                            ).lyrics
+                                          : liveVariantLyrics[
+                                              variants[0]._id
+                                            ] ??
+                                            variants[0].lyrics ??
+                                            ""
+                                      }
+                                      onChange={(e) =>
+                                        handleVariantChange(
+                                          variants[0]._id,
+                                          "lyrics",
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="No lyrics available"
+                                    />
+                                  </div>
+                                ) : (
+                                  // Multiple variants - use tabs
+                                  <Tabs
+                                    defaultValue={variants[0]._id}
+                                    className="w-full"
+                                  >
+                                    <TabsList className="grid w-full grid-cols-2 lg:grid-cols-3">
+                                      {variants.map((variant) => (
+                                        <TabsTrigger
+                                          key={variant._id}
+                                          value={variant._id}
+                                          className="text-xs"
+                                        >
+                                          {variant.source ?? "Unknown"}
+                                        </TabsTrigger>
+                                      ))}
+                                    </TabsList>
+
+                                    {variants.map((variant) => (
+                                      <TabsContent
+                                        key={variant._id}
+                                        value={variant._id}
+                                        className="space-y-2 mt-4"
+                                      >
+                                        <div className="space-y-1">
+                                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                            <div className="flex items-center gap-4">
+                                              <span>
+                                                Source:{" "}
+                                                {variant.source ?? "unknown"}
+                                              </span>
+                                              <span>
+                                                Crawled:{" "}
+                                                {variant.last_crawled_at
+                                                  ? new Date(
+                                                      variant.last_crawled_at
+                                                    ).toLocaleDateString()
+                                                  : "unknown"}
+                                              </span>
+                                            </div>
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={() =>
+                                                openDeleteConfirmDialog(
+                                                  variant._id,
+                                                  variant.source
+                                                )
+                                              }
+                                              disabled={
+                                                !!deletingVariants[variant._id]
+                                              }
+                                              className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            >
+                                              {deletingVariants[variant._id] ? (
+                                                <RefreshCw className="h-3 w-3 animate-spin" />
+                                              ) : (
+                                                <Trash2 className="h-3 w-3" />
+                                              )}
+                                            </Button>
+                                          </div>
+                                          {variant.url && (
+                                            <div className="text-xs text-muted-foreground/70">
+                                              <span className="font-medium">
+                                                URL:
+                                              </span>{" "}
+                                              <a
+                                                href={variant.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-blue-400 hover:text-blue-300 hover:underline break-all"
+                                              >
+                                                {variant.url}
+                                              </a>
+                                            </div>
+                                          )}
+                                        </div>
+                                        <textarea
+                                          className="w-full bg-muted/30 border rounded-lg p-3 min-h-[120px] text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                                          value={
+                                            typeof (
+                                              variantsState[variant._id] ?? {}
+                                            ).lyrics !== "undefined"
+                                              ? (
+                                                  variantsState[variant._id] ??
+                                                  {}
+                                                ).lyrics
+                                              : liveVariantLyrics[
+                                                  variant._id
+                                                ] ??
+                                                variant.lyrics ??
+                                                ""
+                                          }
+                                          onChange={(e) =>
+                                            handleVariantChange(
+                                              variant._id,
+                                              "lyrics",
+                                              e.target.value
+                                            )
+                                          }
+                                          placeholder="No lyrics available"
+                                        />
+                                      </TabsContent>
+                                    ))}
+                                  </Tabs>
+                                )}
+                              </div>
+                            </CardContent>
+                          )}
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Metadata Section */}
+              {details?.album?.metadata && (
+                <>
+                  <Separator />
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Album Metadata</h3>
+                    <div className="bg-muted/50 rounded-lg p-4 border">
+                      <pre className="text-xs text-muted-foreground whitespace-pre-wrap overflow-auto max-h-64">
+                        {JSON.stringify(details.album.metadata, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </ScrollArea>
+      </SheetContent>
+
+      {/* Custom Query Dialog */}
+      <Dialog
+        open={customQueryDialog.open}
+        onOpenChange={(open) =>
+          setCustomQueryDialog((prev) => ({ ...prev, open }))
+        }
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Adjust Lyrics Search Query</DialogTitle>
+            <DialogDescription>
+              Modify the title and artist to improve lyrics search results.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-right">Title</div>
+              <Input
+                value={customQueryDialog.title}
+                onChange={(e) =>
+                  setCustomQueryDialog((prev) => ({
+                    ...prev,
+                    title: e.target.value,
+                  }))
+                }
+                placeholder="Enter track title"
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-right">Artist</div>
+              <Input
+                value={customQueryDialog.artist}
+                onChange={(e) =>
+                  setCustomQueryDialog((prev) => ({
+                    ...prev,
+                    artist: e.target.value,
+                  }))
+                }
+                placeholder="Enter artist name"
+              />
             </div>
           </div>
-        </div>
-      </aside>
-    </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setCustomQueryDialog({ open: false, title: "", artist: "" })
+              }
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCustomRetry}
+              disabled={
+                !customQueryDialog.title.trim() ||
+                !customQueryDialog.artist.trim()
+              }
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry with Custom Query
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmDialog.open}
+        onOpenChange={(open) =>
+          setDeleteConfirmDialog((prev) => ({ ...prev, open }))
+        }
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Lyric Variant</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this lyric variant from{" "}
+              <span className="font-medium">
+                {deleteConfirmDialog.source ?? "unknown source"}
+              </span>
+              ? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmDialog({ open: false })}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteVariant}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Variant
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Sheet>
   );
 }

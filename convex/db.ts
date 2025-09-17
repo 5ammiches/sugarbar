@@ -1,4 +1,6 @@
 import { Doc, Id } from "./_generated/dataModel";
+import { computeCanonicalKey } from "./model/track";
+import { normalizeForCompare, slugify } from "./utils/helpers";
 import {
   internalAction,
   internalMutation,
@@ -21,19 +23,6 @@ import {
 import { hashLyrics } from "./utils/helpers";
 import { LyricsStatus } from "./schema";
 
-/**
- * Upsert an album into the DB.
- *
- * Behavior:
- * - Parses/validates the incoming album with AlbumSchema.
- * - Calls the model upsert to insert/update the album.
- * - Ensures that albums created/updated by workflows are NOT marked approved immediately:
- *   - If the album record doesn't exist yet, it patches approved:false.
- *   - If the existing record has approved === true, it leaves it true.
- *   - Otherwise it patches approved:false.
- *
- * This is best-effort and will swallow patch errors so it doesn't block the upsert.
- */
 export const upsertAlbum = internalMutation({
   args: {
     album: v.any(),
@@ -42,8 +31,6 @@ export const upsertAlbum = internalMutation({
     const al = AlbumSchema.parse(album);
     const id = await Album.upsertAlbum(ctx, { album: al });
 
-    // Ensure new/updated albums created by workflows are not published immediately.
-    // Do not overwrite approved === true if it is already true.
     try {
       const existing = await ctx.db.get(id);
       if (!existing) {
@@ -328,6 +315,26 @@ export const updateTrackDetails = mutation({
       }
     }
 
+    if ("title_normalized" in safePatch) {
+      const track = await ctx.db.get(trackId);
+      if (!track) {
+        throw new Error("Track not found");
+      }
+
+      const title_normalized = safePatch.title_normalized;
+      const desiredPrimaryArtistId = track.primary_artist_id;
+
+      const desiredDurationMs = track.duration_ms;
+
+      const canonicalKey = computeCanonicalKey(
+        title_normalized,
+        desiredPrimaryArtistId,
+        desiredDurationMs
+      );
+
+      safePatch.canonical_key = canonicalKey;
+    }
+
     if (Object.keys(safePatch).length === 0) {
       throw new Error("No valid fields to update");
     }
@@ -405,6 +412,35 @@ export const updateLyricVariant = mutation({
     await ctx.db.patch(lyricVariantId, safePatch);
     const updated = await ctx.db.get(lyricVariantId);
     return updated;
+  },
+});
+
+export const deleteLyricVariant = mutation({
+  args: {
+    lyricVariantId: v.id("lyric_variant"),
+  },
+  handler: async (ctx, { lyricVariantId }) => {
+    const variant = await ctx.db.get(lyricVariantId);
+    if (!variant) {
+      throw new Error("Lyric variant not found");
+    }
+
+    const trackId = variant.track_id;
+
+    await ctx.db.delete(lyricVariantId);
+
+    const remainingVariants = await ctx.db
+      .query("lyric_variant")
+      .withIndex("by_track_id", (q) => q.eq("track_id", trackId))
+      .collect();
+
+    if (remainingVariants.length === 0) {
+      await ctx.db.patch(trackId, {
+        lyrics_fetched_status: "not_fetched",
+      });
+    }
+
+    return { success: true, remainingVariants: remainingVariants.length };
   },
 });
 
