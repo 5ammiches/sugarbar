@@ -732,15 +732,11 @@ export default function AlbumReviewDrawer({
                                         : t.title ?? ""
                                     }
                                     onChange={(e) => {
-                                      const title = e.target.value;
-                                      const { base_title } =
-                                        normalizeAlbumTitle(title);
-                                      const title_normalized = base_title;
-
-                                      handleTrackChange(t._id, {
-                                        title,
-                                        title_normalized: title_normalized,
-                                      });
+                                      handleTrackChange(
+                                        t._id,
+                                        "title",
+                                        String(e.target.value)
+                                      );
                                     }}
                                     placeholder="Track title"
                                   />

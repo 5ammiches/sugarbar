@@ -6,7 +6,7 @@ import * as AlbumModel from "./album";
 import * as Metadata from "./metadata";
 import { normalizeText } from "../utils/helpers";
 
-function computeCanonicalKey(
+export function computeCanonicalKey(
   titleNormalized: string,
   primaryArtistId: Id<"artist">,
   durationMs: number
@@ -158,10 +158,6 @@ export async function upsertTrack(
           : existing.explicit_flag,
       primary_artist_id: desiredPrimaryArtistId,
       artist_ids: artistIds.length > 0 ? artistIds : existing.artist_ids ?? [],
-      genre_tags:
-        (track.genre_tags && track.genre_tags.length > 0
-          ? track.genre_tags
-          : existing.genre_tags) ?? [],
       lyrics_fetched_status:
         track.lyrics_fetched_status ??
         existing.lyrics_fetched_status ??
@@ -193,7 +189,6 @@ export async function upsertTrack(
     explicit_flag: track.explicit_flag,
     primary_artist_id: desiredPrimaryArtistId,
     artist_ids: artistIds,
-    genre_tags: track.genre_tags ?? [],
     lyrics_fetched_status: track.lyrics_fetched_status ?? "not_fetched",
     canonical_key: canonicalKey,
     metadata: incomingMeta,

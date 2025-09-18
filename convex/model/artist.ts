@@ -77,17 +77,8 @@ export async function upsertArtist(
       JSON.stringify(existing.metadata ?? {}) !==
       JSON.stringify(mergedMeta ?? {});
 
-    const incomingGenres = artist.genre_tags ?? [];
-    const desiredGenres =
-      incomingGenres.length > 0 ? incomingGenres : existing.genre_tags ?? [];
-    const genresChanged = !arraysEqualUnordered(
-      existing.genre_tags ?? [],
-      desiredGenres
-    );
-
-    if (metaChanged || genresChanged) {
+    if (metaChanged) {
       await ctx.db.patch(existing._id, {
-        genre_tags: desiredGenres,
         metadata: mergedMeta,
       });
     }
@@ -100,7 +91,6 @@ export async function upsertArtist(
     name: artist.name,
     name_normalized: nameNormalized,
     aliases: [],
-    genre_tags: artist.genre_tags ?? [],
     metadata: metadata,
   });
 

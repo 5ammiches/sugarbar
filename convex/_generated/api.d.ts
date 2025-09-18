@@ -11,6 +11,7 @@
 import type * as album_workflow from "../album_workflow.js";
 import type * as db from "../db.js";
 import type * as example from "../example.js";
+import type * as genre from "../genre.js";
 import type * as lyric from "../lyric.js";
 import type * as model_album from "../model/album.js";
 import type * as model_artist from "../model/artist.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   album_workflow: typeof album_workflow;
   db: typeof db;
   example: typeof example;
+  genre: typeof genre;
   lyric: typeof lyric;
   "model/album": typeof model_album;
   "model/artist": typeof model_artist;

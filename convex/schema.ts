@@ -18,7 +18,7 @@ export const AlbumFields = {
   release_date: v.string(),
   total_tracks: v.optional(v.number()),
   edition_tag: v.optional(v.string()),
-  genre_tags: v.array(v.string()),
+  genre_tags: v.optional(v.array(v.string())),
   images: v.optional(v.array(v.string())),
   // processed_status: v.boolean(),
   metadata: v.optional(MetadataField),
@@ -42,6 +42,7 @@ export const AlbumFields = {
     )
   ),
   latest_workflow_updated_at: v.optional(v.number()),
+  last_edited_at: v.optional(v.number()),
 };
 
 export const TrackFields = {
@@ -58,7 +59,7 @@ export const TrackFields = {
   release_date: v.optional(v.string()),
   edition_tag: v.optional(v.string()), // e.g., "Deluxe", "Live", "Radio Edit"
   lyrics_fetched_status: LyricsStatus,
-  genre_tags: v.array(v.string()),
+  genre_tags: v.optional(v.array(v.string())),
   // processed_status: v.boolean(),
   metadata: v.optional(MetadataField),
 };
@@ -67,21 +68,37 @@ export const ArtistFields = {
   name: v.string(),
   name_normalized: v.string(),
   aliases: v.array(v.string()),
-  genre_tags: v.array(v.string()),
+  genre_tags: v.optional(v.array(v.string())),
   // processed_status: v.boolean(),
   metadata: v.optional(MetadataField),
 };
 
 export const LyricVariantFields = {
   track_id: v.id("track"),
-  source: v.string(), // "genius" | "musixmatch" | "other"
+  source: v.string(),
   lyrics: v.string(),
   url: v.optional(v.string()),
-  text_hash: v.string(), // normalized text hash for dedupe
-  last_crawled_at: v.number(), // epoch ms
-  version: v.optional(v.number()), // increment if the same source text changes
-  confidence: v.optional(v.number()), // keep simple (0-1)
-  processed_status: v.boolean(), // NLP/alignment not yet done -> false
+  text_hash: v.string(),
+  last_crawled_at: v.number(),
+  version: v.optional(v.number()),
+  confidence: v.optional(v.number()),
+  processed_status: v.boolean(),
+};
+
+export const GenreFields = {
+  name: v.string(),
+  name_normalized: v.string(),
+  slug: v.string(),
+};
+
+export const AlbumGenreFields = {
+  album_id: v.id("album"),
+  genre_id: v.id("genre"),
+};
+
+export const ArtistGenreFields = {
+  artist_id: v.id("artist"),
+  genre_id: v.id("genre"),
 };
 
 export const AlbumTrackFields = {
@@ -145,6 +162,20 @@ export default defineSchema({
     .index("by_track_id", ["track_id"])
     .index("by_track_source", ["track_id", "source"])
     .index("by_text_hash", ["text_hash"]),
+
+  genre: defineTable(GenreFields)
+    .index("by_name_normalized", ["name_normalized"])
+    .index("by_slug", ["slug"]),
+
+  album_genre: defineTable(AlbumGenreFields)
+    .index("by_album_id", ["album_id"])
+    .index("by_genre_id", ["genre_id"])
+    .index("by_album_genre", ["album_id", "genre_id"]),
+
+  artist_genre: defineTable(ArtistGenreFields)
+    .index("by_artist_id", ["artist_id"])
+    .index("by_genre_id", ["genre_id"])
+    .index("by_artist_genre", ["artist_id", "genre_id"]),
 
   workflow_job: defineTable(WorkflowJobFields)
     .index("by_workflow_id", ["workflow_id"])

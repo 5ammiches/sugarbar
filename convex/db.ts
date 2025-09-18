@@ -1,27 +1,25 @@
+import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
-import { computeCanonicalKey } from "./model/track";
-import { normalizeForCompare, slugify } from "./utils/helpers";
 import {
-  internalAction,
   internalMutation,
   internalQuery,
   mutation,
   query,
 } from "./_generated/server";
-import { internal } from "./_generated/api";
-import * as Track from "./model/track";
 import * as Album from "./model/album";
 import * as Artist from "./model/artist";
 import * as Lyric from "./model/lyric";
-import { v } from "convex/values";
+import * as Track from "./model/track";
+import { computeCanonicalKey } from "./model/track";
+import { LyricsStatus } from "./schema";
+import { hashLyrics, normalizeAlbumTitle } from "./utils/helpers";
 import {
   AlbumSchema,
   ArtistSchema,
   LyricResponseSchema,
   TrackSchema,
 } from "./utils/typings";
-import { hashLyrics } from "./utils/helpers";
-import { LyricsStatus } from "./schema";
 
 export const upsertAlbum = internalMutation({
   args: {
@@ -146,13 +144,7 @@ export const getAlbumDetails = query({
       .collect();
 
     const trackIds = albumTracks.map((at) => at.track_id);
-
-    const tracks = await Promise.all(
-      trackIds.map(async (tid) => {
-        if (!tid) return null;
-        return (await ctx.db.get(tid)) as Doc<"track"> | null;
-      })
-    );
+    const tracks = await Promise.all(trackIds.map((id) => ctx.db.get(id)));
 
     const tracksWithLyrics: Array<{
       artist: Doc<"artist"> | null;
@@ -173,10 +165,25 @@ export const getAlbumDetails = query({
       });
     }
 
+    const albumGenreLinks = await ctx.db
+      .query("album_genre")
+      .withIndex("by_album_id", (q) => q.eq("album_id", albumId))
+      .collect();
+
+    const genres = await Promise.all(
+      albumGenreLinks.map(async (link) => {
+        const genre = await ctx.db.get(link.genre_id);
+        return genre;
+      })
+    );
+
+    const validGenres = genres.filter((g): g is Doc<"genre"> => g !== null);
+
     return {
       album,
       primaryArtist,
       tracks: tracksWithLyrics,
+      genres: validGenres,
     };
   },
 });
@@ -296,7 +303,6 @@ export const updateTrackDetails = mutation({
   handler: async (ctx, { trackId, patch }) => {
     const allowedKeys = new Set([
       "title",
-      "title_normalized",
       "track_number",
       "disc_number",
       "duration_ms",
@@ -315,20 +321,41 @@ export const updateTrackDetails = mutation({
       }
     }
 
-    if ("title_normalized" in safePatch) {
+    if ("title" in safePatch || "duration_ms" in safePatch) {
       const track = await ctx.db.get(trackId);
       if (!track) {
-        throw new Error("Track not found");
+        throw new Error(`Track with ID ${trackId} not found`);
       }
 
-      const title_normalized = safePatch.title_normalized;
-      const desiredPrimaryArtistId = track.primary_artist_id;
+      const titleToNormalize =
+        typeof safePatch.title === "string" && safePatch.title.length > 0
+          ? safePatch.title
+          : track.title ?? "";
 
-      const desiredDurationMs = track.duration_ms;
+      const { base_title, edition_tag } = normalizeAlbumTitle(titleToNormalize);
+      safePatch.title_normalized = base_title;
+      if (edition_tag && !("edition_tag" in safePatch)) {
+        safePatch.edition_tag = edition_tag;
+      }
+
+      // Determine the duration to use for canonical key: prefer patched duration if valid.
+      const desiredDurationMs =
+        typeof safePatch.duration_ms === "number" && safePatch.duration_ms > 0
+          ? safePatch.duration_ms
+          : typeof track.duration_ms === "number"
+          ? track.duration_ms
+          : 0;
+
+      const primaryArtistId = track.primary_artist_id;
+      if (!primaryArtistId) {
+        throw new Error(
+          "Track missing primary artist id; cannot compute canonical key"
+        );
+      }
 
       const canonicalKey = computeCanonicalKey(
-        title_normalized,
-        desiredPrimaryArtistId,
+        safePatch.title_normalized,
+        primaryArtistId,
         desiredDurationMs
       );
 
@@ -505,5 +532,65 @@ export const getAlbumContentFlags = query({
     }
 
     return results;
+  },
+});
+
+export const updateApprovedAlbum = mutation({
+  args: {
+    albumId: v.id("album"),
+    patch: v.record(v.string(), v.any()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    updated: v.optional(v.any()),
+  }),
+  handler: async (ctx, { albumId, patch }) => {
+    const album = await ctx.db.get(albumId);
+    if (!album) {
+      throw new Error("Album not found");
+    }
+
+    if (!album.approved) {
+      throw new Error("Can only edit approved albums");
+    }
+
+    const allowedKeys = new Set([
+      "title",
+      "edition_tag",
+      "release_date",
+      "total_tracks",
+      "genre_tags",
+      "images",
+      "metadata",
+    ]);
+
+    const safePatch: Record<string, any> = {};
+    for (const [k, vVal] of Object.entries(patch)) {
+      if (allowedKeys.has(k)) {
+        safePatch[k] = vVal;
+      }
+    }
+
+    if (Object.keys(safePatch).length === 0) {
+      return { success: false };
+    }
+
+    if ("title" in safePatch) {
+      const { normalizeAlbumTitle } = await import("./utils/helpers");
+      const { base_title, edition_tag } = normalizeAlbumTitle(safePatch.title);
+      safePatch.title_normalized = base_title;
+      if (edition_tag && !("edition_tag" in safePatch)) {
+        safePatch.edition_tag = edition_tag;
+      }
+
+      // No canonical key for albums here; leave canonical logic to track changes.
+    }
+
+    safePatch.last_edited_at = Date.now();
+
+    await ctx.db.patch(albumId, safePatch);
+    const updated = await ctx.db.get(albumId);
+
+    return { success: true, updated };
   },
 });

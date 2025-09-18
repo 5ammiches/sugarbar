@@ -120,10 +120,6 @@ export async function upsertAlbum(
       edition_tag: editionTag ?? existing?.edition_tag,
       release_date: album.release_date ?? existing?.release_date,
       total_tracks: totalTracks || existing?.total_tracks,
-      genre_tags:
-        (album.genre_tags && album.genre_tags.length > 0
-          ? album.genre_tags
-          : existing?.genre_tags) ?? [],
       metadata: Metadata.mergeMetadata(existing?.metadata, incomingMetadata),
       images: album.imageUrls ?? existing.images,
     });
@@ -141,7 +137,6 @@ export async function upsertAlbum(
     release_date: album.release_date ?? "",
     total_tracks: totalTracks,
     edition_tag: editionTag,
-    genre_tags: album.genre_tags ?? [],
     metadata: incomingMetadata,
     images: album.imageUrls ?? [],
     // processed_status: false,
