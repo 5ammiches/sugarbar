@@ -5,16 +5,16 @@ import { Doc, Id } from "@/../convex/_generated/dataModel";
 type AlbumDoc = Doc<"album">;
 type AlbumWithArtistAndFlags = AlbumDoc & { artistName?: string } & {
   flags?: { hasExplicit: boolean; hasLyrics: boolean; hasAudio: boolean };
+} & {
+  genre_tags?: string[];
 };
 
 interface AlbumGridProps {
   albums: AlbumDoc[];
   onAlbumClick: (album: AlbumDoc) => void;
   artistMap: Map<Id<"artist">, Doc<"artist">>;
-  flagsMap: Map<
-    Id<"album">,
-    { hasExplicit: boolean; hasLyrics: boolean; hasAudio: boolean }
-  >;
+  flagsMap: Map<Id<"album">, { hasExplicit: boolean; hasLyrics: boolean; hasAudio: boolean }>;
+  albumGenresMap: Map<Id<"album">, Array<{ id: any; name: string; slug: string }>>;
 }
 
 export function AlbumGrid({
@@ -22,6 +22,7 @@ export function AlbumGrid({
   onAlbumClick,
   artistMap,
   flagsMap,
+  albumGenresMap,
 }: AlbumGridProps) {
   const artistNameMap = useMemo(() => {
     const m = new Map<Id<"artist">, string>();
@@ -36,24 +37,24 @@ export function AlbumGrid({
     return albums.map((al) => {
       const name = artistNameMap.get(al.primary_artist_id);
       const flags = flagsMap?.get(al._id);
+      const genres = albumGenresMap.get(al._id) ?? [];
+      const genreNames = genres.map((g) => g.name);
       return {
         ...al,
         artistName: name ?? "Unknown Artist",
         flags,
+        genre_tags: genreNames,
       } as AlbumWithArtistAndFlags;
     });
-  }, [albums, artistNameMap]);
+  }, [albums, artistNameMap, flagsMap, albumGenresMap]);
 
   if (albums.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-muted-foreground">
-            No approved albums yet
-          </h3>
+          <h3 className="text-lg font-semibold text-muted-foreground">No approved albums yet</h3>
           <p className="text-sm text-muted-foreground max-w-md">
-            Search for albums and approve them in the Job Queue to see them
-            here.
+            Search for albums and approve them in the Job Queue to see them here.
           </p>
           <div className="flex gap-2">
             <button className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors">

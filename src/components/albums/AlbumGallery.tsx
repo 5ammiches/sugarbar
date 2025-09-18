@@ -5,10 +5,7 @@ import { api } from "@/../convex/_generated/api";
 import { Doc, Id } from "@/../convex/_generated/dataModel";
 
 import { AlbumGrid } from "@/components/albums/album-grid";
-import {
-  AlbumFilters,
-  type FilterState,
-} from "@/components/albums/album-filters";
+import { AlbumFilters, type FilterState } from "@/components/albums/album-filters";
 import { AlbumDetailDrawer } from "@/components/albums/album-detail-drawer";
 
 type AlbumDoc = Doc<"album">;
@@ -18,9 +15,7 @@ function normalize(str?: string | null) {
 }
 
 export default function AlbumGallery() {
-  const [selectedAlbumId, setSelectedAlbumId] = useState<Id<"album"> | null>(
-    null
-  );
+  const [selectedAlbumId, setSelectedAlbumId] = useState<Id<"album"> | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     search: "",
     artistId: "",
@@ -36,10 +31,7 @@ export default function AlbumGallery() {
     ...convexQuery(api.db.getApprovedAlbums, {}),
   }) as { data: AlbumDoc[] };
 
-  const albumIds = useMemo(
-    () => approvedAlbums.map((a) => a._id),
-    [approvedAlbums]
-  );
+  const albumIds = useMemo(() => approvedAlbums.map((a) => a._id), [approvedAlbums]);
 
   // Content flags (explicit/lyrics/audio) per album
   const { data: flagList = [] } = useQuery({
@@ -56,6 +48,20 @@ export default function AlbumGallery() {
     return m;
   }, [flagList]);
 
+  // Album genres
+  const { data: albumGenresList = [] } = useQuery({
+    ...convexQuery(api.genre.getAlbumGenres, albumIds.length > 0 ? { albumIds } : "skip"),
+    enabled: albumIds.length > 0,
+  });
+
+  const albumGenresMap = useMemo(() => {
+    const m = new Map<Id<"album">, Array<{ id: any; name: string; slug: string }>>();
+    for (const ag of albumGenresList) {
+      m.set(ag.albumId, ag.genres);
+    }
+    return m;
+  }, [albumGenresList]);
+
   const primaryArtistIds = useMemo(() => {
     const ids = approvedAlbums
       .map((a) => a.primary_artist_id as Id<"artist"> | undefined)
@@ -64,7 +70,10 @@ export default function AlbumGallery() {
   }, [approvedAlbums]);
 
   const { data: artists = [] } = useQuery({
-    ...convexQuery(api.db.getArtistsByIds, primaryArtistIds.length > 0 ? { artistIds: primaryArtistIds } : "skip"),
+    ...convexQuery(
+      api.db.getArtistsByIds,
+      primaryArtistIds.length > 0 ? { artistIds: primaryArtistIds } : "skip"
+    ),
     enabled: primaryArtistIds.length > 0,
   });
 
@@ -92,11 +101,10 @@ export default function AlbumGallery() {
 
       // Genre filters: require all selected genres to be present
       if ((filters.genres?.length ?? 0) > 0) {
-        // const set = new Set(album.genre_tags ?? []);
-        // TODO update for genre tags
-        const set = new Set();
-        for (const g of filters.genres) {
-          if (!set.has(g)) return false;
+        const albumGenres = albumGenresMap.get(album._id) ?? [];
+        const genreNames = new Set(albumGenres.map((g) => g.name));
+        for (const selectedGenre of filters.genres) {
+          if (!genreNames.has(selectedGenre)) return false;
         }
       }
 
@@ -109,8 +117,7 @@ export default function AlbumGallery() {
       // Free text search over album title and primary artist name
       if (q) {
         const t = normalize(album.title);
-        const artistName =
-          artistMap.get(album.primary_artist_id as Id<"artist">)?.name ?? "";
+        const artistName = artistMap.get(album.primary_artist_id as Id<"artist">)?.name ?? "";
         const an = normalize(artistName);
         if (!t.includes(q) && !an.includes(q)) return false;
       }
@@ -134,10 +141,8 @@ export default function AlbumGallery() {
           return normalize(a.title).localeCompare(normalize(b.title));
         }
         case "artist": {
-          const an =
-            artistMap.get(a.primary_artist_id as Id<"artist">)?.name ?? "";
-          const bn =
-            artistMap.get(b.primary_artist_id as Id<"artist">)?.name ?? "";
+          const an = artistMap.get(a.primary_artist_id as Id<"artist">)?.name ?? "";
+          const bn = artistMap.get(b.primary_artist_id as Id<"artist">)?.name ?? "";
           return normalize(an).localeCompare(normalize(bn));
         }
         default:
@@ -146,7 +151,7 @@ export default function AlbumGallery() {
     });
 
     return sorted;
-  }, [approvedAlbums, filters, flagsMap, artistMap]);
+  }, [approvedAlbums, filters, flagsMap, artistMap, albumGenresMap]);
 
   const handleAlbumClick = (album: AlbumDoc) => {
     setSelectedAlbumId(album._id);
@@ -164,12 +169,10 @@ export default function AlbumGallery() {
       <div className="container mx-auto px-4 py-8">
         <div className="space-y-6">
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight text-balance">
-              Approved Albums
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight text-balance">Approved Albums</h1>
             <p className="text-muted-foreground">
-              Browse and explore your approved album collection ({filteredCount}{" "}
-              of {totalCount} albums)
+              Browse and explore your approved album collection ({filteredCount} of {totalCount}{" "}
+              albums)
             </p>
           </div>
 
@@ -178,6 +181,7 @@ export default function AlbumGallery() {
             onFiltersChange={setFilters}
             albums={approvedAlbums}
             artistMap={artistMap}
+            albumGenresMap={albumGenresMap}
           />
 
           {/* AlbumGrid also expects Album[], cast for compatibility */}
@@ -186,6 +190,7 @@ export default function AlbumGallery() {
             onAlbumClick={handleAlbumClick}
             artistMap={artistMap}
             flagsMap={flagsMap}
+            albumGenresMap={albumGenresMap}
           />
         </div>
       </div>

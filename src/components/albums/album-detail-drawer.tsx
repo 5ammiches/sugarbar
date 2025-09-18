@@ -5,29 +5,21 @@ import { Doc, Id } from "@/../convex/_generated/dataModel";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useQuery } from "@tanstack/react-query";
 import { convexQuery } from "@convex-dev/react-query";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Calendar,
   CheckCircle,
   ChevronDown,
   ChevronRight,
   Copy,
+  Edit,
   ExternalLink,
   Music,
   Play,
@@ -36,11 +28,13 @@ import {
 
 import { AudioPlayer } from "./audio-player";
 import { LyricsDisplay } from "./lyrics-display";
+import { AlbumEditorDrawer } from "./album-editor-drawer";
 import { Skeleton } from "../ui/skeleton";
 
 type AlbumDetailsResponse = {
   album: Doc<"album">;
   primaryArtist?: Doc<"artist"> | null;
+  genres: Array<Doc<"genre">>;
   tracks: Array<{
     artist: Doc<"artist">;
     track: Doc<"track">;
@@ -49,7 +43,7 @@ type AlbumDetailsResponse = {
 } | null;
 
 interface AlbumDetailDrawerProps {
-  albumId?: Id<"album"> | undefined | null;
+  albumId?: Id<"album"> | undefined;
   open: boolean;
   onClose: () => void;
 }
@@ -88,9 +82,7 @@ function TrackItem({
 
   const audioUrl =
     typeof track.metadata === "object" && track.metadata
-      ? (track.metadata as any).audio_url ||
-        (track.metadata as any).preview_url ||
-        undefined
+      ? (track.metadata as any).audio_url || (track.metadata as any).preview_url || undefined
       : undefined;
 
   return (
@@ -99,19 +91,12 @@ function TrackItem({
         <CollapsibleTrigger asChild>
           <div className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <span className="text-sm text-muted-foreground w-6 text-right">
-                {index}
-              </span>
+              <span className="text-sm text-muted-foreground w-6 text-right">{index}</span>
               <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-sm truncate">
-                  {track.title ?? "Untitled"}
-                </h4>
+                <h4 className="font-medium text-sm truncate">{track.title ?? "Untitled"}</h4>
                 <p className="text-xs text-muted-foreground truncate">
                   {track.explicit_flag && (
-                    <Badge
-                      variant="secondary"
-                      className="text-xs px-1.5 py-0.5 mr-2"
-                    >
+                    <Badge variant="secondary" className="text-xs px-1.5 py-0.5 mr-2">
                       E
                     </Badge>
                   )}
@@ -157,10 +142,7 @@ function TrackItem({
             )}
 
             {lyricVariants.length > 0 && (
-              <LyricsDisplay
-                lyrics={lyricVariants}
-                trackTitle={track.title ?? "Track"}
-              />
+              <LyricsDisplay lyrics={lyricVariants} trackTitle={track.title ?? "Track"} />
             )}
           </CollapsibleContent>
         )}
@@ -169,18 +151,14 @@ function TrackItem({
   );
 }
 
-export function AlbumDetailDrawer({
-  albumId,
-  open,
-  onClose,
-}: AlbumDetailDrawerProps) {
+export function AlbumDetailDrawer({ albumId, open, onClose }: AlbumDetailDrawerProps) {
+  const [showEditor, setShowEditor] = useState(false);
   const { data: details } = useQuery({
     ...convexQuery(api.db.getAlbumDetails, albumId ? { albumId } : "skip"),
     enabled: !!albumId,
   }) as { data: AlbumDetailsResponse };
 
-  const [cachedDetails, setCachedDetails] =
-    React.useState<AlbumDetailsResponse | null>(null);
+  const [cachedDetails, setCachedDetails] = React.useState<AlbumDetailsResponse | null>(null);
   const clearTimer = React.useRef<number | null>(null);
 
   React.useEffect(() => {
@@ -226,48 +204,54 @@ export function AlbumDetailDrawer({
   }, [effectiveDetails]);
 
   return (
-    <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent
-        side="right"
-        aria-describedby={undefined} // remove if you add a hidden description below
-        className="w-full sm:max-w-2xl p-0"
-        style={{ backgroundColor: "var(--background)" }}
-      >
-        <VisuallyHidden asChild>
-          <SheetTitle>
-            {effectiveDetails?.album?.title ?? "Album details"}
-          </SheetTitle>
-        </VisuallyHidden>
+    <>
+      <Sheet open={open} onOpenChange={onClose}>
+        <SheetContent
+          side="right"
+          aria-describedby={undefined} // remove if you add a hidden description below
+          className="w-full sm:max-w-2xl p-0"
+          style={{ backgroundColor: "var(--background)" }}
+        >
+          <VisuallyHidden asChild>
+            <SheetTitle>{effectiveDetails?.album?.title ?? "Album details"}</SheetTitle>
+          </VisuallyHidden>
 
-        <ScrollArea className="h-full">
-          {effectiveDetails ? (
-            <DrawerBody
-              details={effectiveDetails}
-              trackArtistMap={trackArtistMap}
-            />
-          ) : (
-            <div className="p-6 space-y-4">
-              <Skeleton className="h-8 w-3/4" />
-              <Skeleton className="h-6 w-1/3" />
-              <Skeleton className="h-64 w-full" />
-              <Skeleton className="h-6 w-1/2" />
-            </div>
-          )}
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
+          <ScrollArea className="h-full">
+            {effectiveDetails ? (
+              <DrawerBody
+                details={effectiveDetails}
+                trackArtistMap={trackArtistMap}
+                onEditClick={() => setShowEditor(true)}
+              />
+            ) : (
+              <div className="p-6 space-y-4">
+                <Skeleton className="h-8 w-3/4" />
+                <Skeleton className="h-6 w-1/3" />
+                <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-6 w-1/2" />
+              </div>
+            )}
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      <AlbumEditorDrawer albumId={albumId} open={showEditor} onClose={() => setShowEditor(false)} />
+    </>
   );
 }
 
 function DrawerBody({
   details,
   trackArtistMap,
+  onEditClick,
 }: {
   details: NonNullable<AlbumDetailsResponse>;
   trackArtistMap: Map<Id<"artist">, Doc<"artist">>;
+  onEditClick: () => void;
 }) {
   const album = details.album;
   const primaryArtist = details.primaryArtist ?? null;
+  const genres = details.genres ?? [];
   const tracks = details.tracks ?? [];
 
   const approvedDate =
@@ -320,14 +304,11 @@ function DrawerBody({
             </div>
 
             <div className="flex flex-wrap gap-1">
-              {/*TODO updae for genre tags*/}
-              {/*{(Array.isArray(album.genre_tags) ? album.genre_tags : [])
-                .slice(0, 6)
-                .map((g) => (
-                  <Badge key={g} variant="secondary" className="text-xs">
-                    {g}
-                  </Badge>
-                ))}*/}
+              {genres.slice(0, 6).map((genre) => (
+                <Badge key={genre._id} variant="secondary" className="text-xs">
+                  {genre.name}
+                </Badge>
+              ))}
 
               {album.edition_tag && (
                 <Badge variant="outline" className="text-xs">
@@ -341,9 +322,7 @@ function DrawerBody({
         {album.approved && (
           <div className="flex items-center text-green-600 gap-2 p-3 bg-secondary dark:bg-secondary/20 rounded-lg border border-border">
             <CheckCircle className="h-4 w-4 " />
-            <span className="text-sm font-medium ">
-              Approved on {approvedDate}
-            </span>
+            <span className="text-sm font-medium ">Approved on {approvedDate}</span>
             {album.latest_workflow_id && (
               <Badge variant="outline" className="text-xs ml-auto">
                 Workflow: {String(album.latest_workflow_id).slice(0, 8)}...
@@ -371,9 +350,7 @@ function DrawerBody({
           {tracks.map((entry, idx) => {
             const t = entry.track;
             const artistId = t.primary_artist_id as Id<"artist"> | undefined;
-            const artistName = artistId
-              ? trackArtistMap.get(artistId)?.name
-              : "Unknown Artist";
+            const artistName = artistId ? trackArtistMap.get(artistId)?.name : "Unknown Artist";
             return (
               <TrackItem
                 key={t._id}
@@ -392,6 +369,13 @@ function DrawerBody({
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Actions</h3>
         <div className="flex flex-wrap gap-2">
+          {album.approved && (
+            <Button variant="outline" size="sm" onClick={onEditClick}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Album
+            </Button>
+          )}
+
           <Button variant="outline" size="sm" asChild>
             <a
               href={
@@ -411,8 +395,7 @@ function DrawerBody({
             variant="outline"
             size="sm"
             onClick={() => {
-              if (album._id)
-                void navigator.clipboard.writeText(String(album._id));
+              if (album._id) void navigator.clipboard.writeText(String(album._id));
             }}
           >
             <Copy className="h-4 w-4 mr-2" />

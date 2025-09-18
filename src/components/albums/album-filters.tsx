@@ -15,11 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, X, Filter } from "lucide-react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export interface FilterState {
   search: string;
@@ -39,6 +35,7 @@ interface AlbumFiltersProps {
   onFiltersChange: (filters: FilterState) => void;
   albums: AlbumDoc[];
   artistMap: Map<Id<"artist">, Doc<"artist">>;
+  albumGenresMap: Map<Id<"album">, Array<{ id: any; name: string; slug: string }>>;
 }
 
 export function AlbumFilters({
@@ -46,6 +43,7 @@ export function AlbumFilters({
   onFiltersChange,
   albums,
   artistMap,
+  albumGenresMap,
 }: AlbumFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -64,16 +62,16 @@ export function AlbumFilters({
     return Array.from(years).sort((a, b) => b - a);
   }, [albums]);
 
-  // TODO update for genres
   const availableGenres = useMemo(() => {
     const genres = new Set<string>();
-    // for (const album of albums ?? []) {
-    //   for (const g of album.genre_tags ?? []) {
-    //     genres.add(g);
-    //   }
-    // }
+    for (const album of albums ?? []) {
+      const albumGenres = albumGenresMap.get(album._id) ?? [];
+      for (const genre of albumGenres) {
+        genres.add(genre.name);
+      }
+    }
     return Array.from(genres).sort();
-  }, [albums]);
+  }, [albums, albumGenresMap]);
 
   const updateFilters = (updates: Partial<FilterState>) => {
     onFiltersChange({ ...filters, ...updates });
@@ -144,9 +142,7 @@ export function AlbumFilters({
 
           <Select
             value={filters.year || "all-years"}
-            onValueChange={(value) =>
-              updateFilters({ year: value === "all-years" ? "" : value })
-            }
+            onValueChange={(value) => updateFilters({ year: value === "all-years" ? "" : value })}
           >
             <SelectTrigger className="w-32">
               <SelectValue placeholder="Year" />
@@ -163,9 +159,7 @@ export function AlbumFilters({
 
           <Select
             value={filters.sortBy}
-            onValueChange={(value: FilterState["sortBy"]) =>
-              updateFilters({ sortBy: value })
-            }
+            onValueChange={(value: FilterState["sortBy"]) => updateFilters({ sortBy: value })}
           >
             <SelectTrigger className="w-32">
               <SelectValue />
@@ -248,9 +242,7 @@ export function AlbumFilters({
                 {availableGenres.map((genre) => (
                   <Badge
                     key={genre}
-                    variant={
-                      filters.genres.includes(genre) ? "default" : "outline"
-                    }
+                    variant={filters.genres.includes(genre) ? "default" : "outline"}
                     className="cursor-pointer hover:bg-primary/80 transition-colors"
                     onClick={() => toggleGenre(genre)}
                   >

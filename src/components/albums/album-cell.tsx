@@ -117,7 +117,7 @@ export default function AlbumCell({
                 }}
               >
                 {wfCopied ? (
-                  <span className="inline-flex items-center gap-1 text-emerald-400 animate-in fade-in">
+                  <span className="inline-flex items-center gap-1 text-emerald-400">
                     <Check className="h-3 w-3" />
                     copied
                   </span>
@@ -149,7 +149,7 @@ export default function AlbumCell({
                   }}
                 >
                   {albCopied ? (
-                    <span className="inline-flex items-center gap-1 text-emerald-400 animate-in fade-in">
+                    <span className="inline-flex items-center gap-1 text-emerald-400">
                       <Check className="h-3 w-3" />
                       copied
                     </span>
