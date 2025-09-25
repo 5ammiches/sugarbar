@@ -2,7 +2,7 @@ import { LYRIC_SOURCES } from "@/lib/constants";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { action, internalAction } from "./_generated/server";
-import { PythonLyricProvider } from "./providers/lyrics/python_lyrics";
+import { PythonMusicProvider } from "./providers/audio_lyrics/pythonMusic";
 import { generateTitleVariantsForLyrics, normalizeText } from "./utils/helpers";
 import { LyricSource } from "./utils/typings";
 
@@ -12,7 +12,7 @@ import { LyricSource } from "./utils/typings";
  */
 function makeLyrics(endpoint?: string) {
   endpoint = endpoint ?? process.env.PYTHON_LYRICS_URL;
-  return new PythonLyricProvider(endpoint);
+  return new PythonMusicProvider(endpoint);
 }
 
 const vLyricsSource = v.union(...LYRIC_SOURCES.map((s) => v.literal(s)));
@@ -34,7 +34,11 @@ export const getLyricsByTrack = internalAction({
 
     for (const titleVariant of titleVariants) {
       try {
-        const lyric = await client.getLyricsByTrack(args.source, titleVariant, artist);
+        const lyric = await client.getLyricsByTrack(
+          args.source,
+          titleVariant,
+          artist
+        );
 
         if (lyric && lyric.lyrics && lyric.lyrics.length > 0) {
           return lyric;
@@ -146,12 +150,15 @@ export const fetchLyricsWithCustomQuery = action({
     ctx,
     { trackId, customTitle, customArtist, forceOverwrite }
   ): Promise<boolean> => {
-    const result = await ctx.runAction(internal.lyric.fetchLyricsInternalWithCustomQuery, {
-      trackId,
-      customTitle,
-      customArtist,
-      forceOverwrite,
-    });
+    const result = await ctx.runAction(
+      internal.lyric.fetchLyricsInternalWithCustomQuery,
+      {
+        trackId,
+        customTitle,
+        customArtist,
+        forceOverwrite,
+      }
+    );
     return result;
   },
 });
@@ -163,7 +170,10 @@ export const fetchLyricsInternalWithCustomQuery = internalAction({
     customArtist: v.string(),
     forceOverwrite: v.optional(v.boolean()),
   },
-  handler: async (ctx, { trackId, customTitle, customArtist, forceOverwrite }) => {
+  handler: async (
+    ctx,
+    { trackId, customTitle, customArtist, forceOverwrite }
+  ) => {
     const track = await ctx.runQuery(internal.db.getTrack, { trackId });
     if (!track) return false;
 

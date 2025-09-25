@@ -106,6 +106,19 @@ export const AlbumTrackFields = {
   track_id: v.id("track"),
 };
 
+// TODO update trackId and storageId to track_id and storage_id then make migrations while data is being read in audio.ts
+export const AudioPreviewFields = {
+  trackId: v.id("track"),
+  storageId: v.id("_storage"),
+  meta: v.object({
+    bitrateKbps: v.float64(),
+    codec: v.string(),
+    contentType: v.string(),
+    durationSec: v.float64(),
+    sourceUrl: v.optional(v.string()),
+  }),
+};
+
 export const WorkflowJobFields = {
   workflow_id: v.string(),
   workflow_name: v.string(),
@@ -176,6 +189,10 @@ export default defineSchema({
     .index("by_artist_id", ["artist_id"])
     .index("by_genre_id", ["genre_id"])
     .index("by_artist_genre", ["artist_id", "genre_id"]),
+
+  audio_preview: defineTable(AudioPreviewFields).index("by_track_id", [
+    "trackId",
+  ]),
 
   workflow_job: defineTable(WorkflowJobFields)
     .index("by_workflow_id", ["workflow_id"])

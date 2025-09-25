@@ -22,7 +22,7 @@ if raw_key is None:
     raise RuntimeError(
         "YOUTUBE_API_KEY is missing. Put it in your environment or a .env file."
     )
-API_KEY: Final[str] = raw_key
+API_KEY:  Final[str] = raw_key
 
 
 class YoutubeScraper:
@@ -98,7 +98,8 @@ class YoutubeScraper:
             )
 
             for section in contents:
-                items = section.get("itemSectionRenderer", {}).get("contents", [])
+                items = section.get("itemSectionRenderer",
+                                    {}).get("contents", [])
 
                 for item in items:
                     video_renderer = item.get("videoRenderer")
@@ -110,12 +111,15 @@ class YoutubeScraper:
                         continue
 
                     # Extract title
-                    title_runs = video_renderer.get("title", {}).get("runs", [])
+                    title_runs = video_renderer.get(
+                        "title", {}).get("runs", [])
                     title = title_runs[0].get("text", "") if title_runs else ""
 
                     # Extract uploader
-                    owner_text = video_renderer.get("ownerText", {}).get("runs", [])
-                    uploader = owner_text[0].get("text", "") if owner_text else ""
+                    owner_text = video_renderer.get(
+                        "ownerText", {}).get("runs", [])
+                    uploader = owner_text[0].get(
+                        "text", "") if owner_text else ""
 
                     # Extract duration
                     duration_text = video_renderer.get("lengthText", {}).get(
@@ -127,7 +131,8 @@ class YoutubeScraper:
                     ):  # Skip live streams and videos without duration
                         continue
 
-                    duration_seconds = self._parse_duration_string(duration_text)
+                    duration_seconds = self._parse_duration_string(
+                        duration_text)
 
                     result = {
                         "videoId": video_id,
@@ -156,7 +161,8 @@ class YoutubeScraper:
         """Search YouTube using manual scraping approach"""
         search_query = f"'{title}' {artist}"
         encoded_query = urllib.parse.quote(search_query)
-        search_url = f"https://www.youtube.com/results?search_query={encoded_query}"
+        search_url = f"https://www.youtube.com/results?search_query={
+            encoded_query}"
 
         try:
             response = self.session.get(search_url, timeout=10)
@@ -171,7 +177,8 @@ class YoutubeScraper:
             search_results = self._parse_search_results(yt_data, limit)
 
             if not search_results:
-                raise NoResultsError(f"No search results found for: {search_query}")
+                raise NoResultsError(
+                    f"No search results found for: {search_query}")
 
             # Filter by duration matching (similar to Go code)
             allowed_duration_start = duration_sec - self.duration_match_threshold
@@ -196,12 +203,14 @@ class YoutubeScraper:
                     f"No duration-matched results found for: {search_query}"
                 )
 
-            filtered_results.sort(key=lambda x: abs(x["durationSec"] - duration_sec))
+            filtered_results.sort(key=lambda x: abs(
+                x["durationSec"] - duration_sec))
 
             return filtered_results[:5]
 
         except requests.RequestException as e:
-            raise ProviderError(f"YouTube scraping request failed: {str(e)}") from e
+            raise ProviderError(
+                f"YouTube scraping request failed: {str(e)}") from e
         except Exception as e:
             raise ProviderError(f"YouTube scraping error: {str(e)}") from e
 
@@ -258,7 +267,8 @@ class Youtube:
 
             if not resp or not resp.items or isinstance(resp, dict):
                 raise NoResultsError(
-                    f"Youtube client: no results found for query: {title} - {artist}"
+                    f"Youtube client: no results found for query: {
+                        title} - {artist}"
                 )
 
             video_ids = [
@@ -271,7 +281,8 @@ class Youtube:
 
             if not videos or not videos.items or isinstance(videos, dict):
                 raise ProviderError(
-                    f"Youtube client: no results found for query: {title} - {artist}"
+                    f"Youtube client: no results found for query: {
+                        title} - {artist}"
                 )
 
             tol = 5
@@ -302,7 +313,8 @@ class Youtube:
 
             if not res:
                 raise ProviderError(
-                    f"Youtube client: no results found for query: {title} - {artist}"
+                    f"Youtube client: no results found for query: {
+                        title} - {artist}"
                 )
 
             return res
@@ -336,7 +348,8 @@ class Youtube:
             ]
             if not files:
                 raise RuntimeError("No file produced")
-            files.sort(key=lambda f: os.path.getmtime(os.path.join(tmp_dir, f)))
+            files.sort(key=lambda f: os.path.getmtime(
+                os.path.join(tmp_dir, f)))
             return os.path.join(tmp_dir, files[-1])
 
         except Exception as e:
@@ -355,11 +368,13 @@ class Youtube:
                 ]
                 if not files:
                     raise RuntimeError("No file produced in fallback")
-                files.sort(key=lambda f: os.path.getmtime(os.path.join(tmp_dir, f)))
+                files.sort(key=lambda f: os.path.getmtime(
+                    os.path.join(tmp_dir, f)))
                 return os.path.join(tmp_dir, files[-1])
             except Exception as fallback_error:
                 raise ProviderError(
-                    f"Youtube client error (both primary and fallback failed): Primary: {str(e)}, Fallback: {str(fallback_error)}"
+                    f"Youtube client error (both primary and fallback failed): Primary: {
+                        str(e)}, Fallback: {str(fallback_error)}"
                 ) from e
 
     def cut_to_m4a(

@@ -1,28 +1,26 @@
-import { PythonProvider } from "./providers/audio_lyrics/python";
 import { v } from "convex/values";
+import { api, internal } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 import {
   action,
   internalAction,
   internalMutation,
-  internalQuery,
   query,
 } from "./_generated/server";
-import { api } from "./_generated/api";
-import { internal } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
+import { PythonMusicProvider } from "./providers/audio_lyrics/pythonMusic";
 import { stripFeaturingCredits } from "./utils/helpers";
 
 const AudioMeta = v.object({
   contentType: v.string(),
   durationSec: v.number(),
-  bitrateKbps: v.number(),
+  bitrateKbps: v.float64(),
   codec: v.string(),
   sourceUrl: v.optional(v.string()),
 });
 
 function makeAudio(endpoint?: string) {
   endpoint = endpoint ?? process.env.PYTHON_LYRICS_URL;
-  return new PythonProvider(endpoint);
+  return new PythonMusicProvider(endpoint);
 }
 
 export const searchYT = internalAction({
@@ -105,18 +103,29 @@ export const searchYouTube = action({
 export const downloadYTAudioPreview = internalAction({
   args: {
     trackId: v.string(),
-    candidateUrls: v.array(v.string()),
+    candidates: v.array(
+      v.object({
+        videoId: v.string(),
+        title: v.string(),
+        durationSec: v.number(),
+        url: v.string(),
+        category: v.string(),
+      })
+    ),
     bitrateKbps: v.optional(v.number()),
     previewStartSec: v.optional(v.number()),
     previewLenSec: v.optional(v.number()),
   },
-  handler: async (ctx, { trackId, candidateUrls, bitrateKbps, previewStartSec, previewLenSec }) => {
+  handler: async (
+    ctx,
+    { trackId, candidates, bitrateKbps, previewStartSec, previewLenSec }
+  ) => {
     const client = makeAudio();
 
     try {
       const preview = await client.downloadYTAudioPreview(
         trackId,
-        candidateUrls,
+        candidates,
         bitrateKbps,
         previewStartSec,
         previewLenSec
@@ -156,34 +165,34 @@ export const fetchTrackPreviewInternal = internalAction({
     const title = stripFeaturingCredits(track.title_normalized);
     const dur_sec = Math.round(track.duration_ms / 1000);
 
-    const candidateUrls = await ctx.runAction(internal.audio.searchYT, {
+    const candidates = await ctx.runAction(internal.audio.searchYT, {
       artist: artist.name_normalized,
       title: title,
       durationSec: dur_sec,
     });
 
-    if (!candidateUrls || !candidateUrls.items || candidateUrls.items.length === 0) {
+    if (!candidates || !candidates.items || candidates.items.length === 0) {
       throw new Error(`No candidate URLs found for track ${trackId}`);
     }
 
-    // Try downloading preview with all candidate URLs
+    // Try downloading preview with all candidate objects
     let result = null;
     try {
       result = await ctx.runAction(internal.audio.downloadYTAudioPreview, {
-        candidateUrls: candidateUrls.items.map((item: any) => item.url),
+        candidates: candidates.items,
         trackId: trackId,
       });
     } catch (error) {
-      // If batch download fails, try individual URLs
-      for (const item of candidateUrls.items.slice(0, 3)) {
+      // If batch download fails, try individual candidates
+      for (const item of candidates.items.slice(0, 3)) {
         try {
           result = await ctx.runAction(internal.audio.downloadYTAudioPreview, {
-            candidateUrls: [item.url],
+            candidates: [item],
             trackId: trackId,
           });
           if (result) break;
         } catch (e) {
-          // Continue to next URL
+          // Continue to next candidate
           continue;
         }
       }
@@ -219,8 +228,11 @@ export const storeResult = internalMutation({
       await ctx.db.delete(preview._id);
     }
 
-    // Insert new preview
-    await ctx.db.insert("audio_preview", { storageId, trackId, meta });
+    await ctx.db.insert("audio_preview", {
+      storageId: storageId,
+      trackId: trackId,
+      meta,
+    });
   },
 });
 
@@ -246,82 +258,38 @@ export const getTrackPreview = query({
   },
 });
 
-export const fetchTrackPreviewWithCustomQuery = internalAction({
+export const getPreviewTrackIdsForAlbum = query({
   args: {
-    trackId: v.id("track"),
-    customTitle: v.string(),
-    customArtist: v.string(),
+    albumId: v.id("album"),
   },
-  handler: async (ctx, { trackId, customTitle, customArtist }) => {
-    const track = await ctx.runQuery(internal.db.getTrack, { trackId });
-    if (!track) return false;
+  returns: v.array(v.id("track")),
+  handler: async (ctx, { albumId }) => {
+    // Fetch all track IDs for the given album
+    const albumTracks = await ctx.db
+      .query("album_track")
+      .withIndex("by_album_id", (q) => q.eq("album_id", albumId))
+      .collect();
 
-    const title = stripFeaturingCredits(customTitle.trim());
-    const artist = customArtist.trim();
-    const dur_sec = Math.ceil(track.duration_ms / 1000);
-
-    const candidateUrls = await ctx.runAction(internal.audio.searchYT, {
-      artist: artist,
-      title: title,
-      durationSec: dur_sec,
-    });
-
-    if (!candidateUrls || !candidateUrls.items || candidateUrls.items.length === 0) {
-      throw new Error(`No candidate URLs found for custom query: ${title} - ${artist}`);
+    if (albumTracks.length === 0) {
+      return [];
     }
 
-    // Try downloading preview with all candidate URLs
-    let result = null;
-    try {
-      result = await ctx.runAction(internal.audio.downloadYTAudioPreview, {
-        candidateUrls: candidateUrls.items.map((item) => item.url),
-        trackId: trackId,
-      });
-    } catch (error) {
-      // If batch download fails, try individual URLs
-      for (const item of candidateUrls.items.slice(0, 3)) {
-        try {
-          result = await ctx.runAction(internal.audio.downloadYTAudioPreview, {
-            candidateUrls: [item.url],
-            trackId: trackId,
-          });
-          if (result) break;
-        } catch (e) {
-          // Continue to next URL
-          continue;
-        }
-      }
-    }
+    const trackIds = albumTracks.map((at) => at.track_id);
 
-    if (!result) {
-      throw new Error(`No preview found for custom query: ${title} - ${artist}`);
-    }
+    // For each track, check if an audio preview exists.
+    // This runs the checks in parallel.
+    const previewChecks = await Promise.all(
+      trackIds.map(async (trackId) => {
+        const preview = await ctx.db
+          .query("audio_preview")
+          .withIndex("by_track_id", (q) => q.eq("trackId", trackId))
+          .first();
+        return preview ? trackId : null;
+      })
+    );
 
-    await ctx.runMutation(internal.audio.storeResult, {
-      storageId: result.storageId,
-      trackId,
-      meta: result.meta,
-    });
-
-    return true;
-  },
-});
-
-// Public action for custom audio preview fetch
-export const fetchAudioPreviewWithCustomQuery = action({
-  args: {
-    trackId: v.id("track"),
-    customTitle: v.string(),
-    customArtist: v.string(),
-  },
-  returns: v.boolean(),
-  handler: async (ctx, { trackId, customTitle, customArtist }): Promise<boolean> => {
-    const result = await ctx.runAction(internal.audio.fetchTrackPreviewWithCustomQuery, {
-      trackId,
-      customTitle,
-      customArtist,
-    });
-    return result;
+    // Filter out nulls and return the list of track IDs that have previews.
+    return previewChecks.filter((id): id is Id<"track"> => id !== null);
   },
 });
 
@@ -334,13 +302,27 @@ export const fetchAudioPreviewFromUrl = action({
     previewStartSec: v.optional(v.number()),
   },
   returns: v.boolean(),
-  handler: async (ctx, { trackId, youtubeUrl, previewStartSec }): Promise<boolean> => {
+  handler: async (
+    ctx,
+    { trackId, youtubeUrl, previewStartSec }
+  ): Promise<boolean> => {
     try {
-      const result = await ctx.runAction(internal.audio.downloadYTAudioPreview, {
-        trackId,
-        candidateUrls: [youtubeUrl],
-        previewStartSec: previewStartSec,
-      });
+      const result = await ctx.runAction(
+        internal.audio.downloadYTAudioPreview,
+        {
+          trackId,
+          candidates: [
+            {
+              videoId: "",
+              title: "",
+              durationSec: 0,
+              url: youtubeUrl,
+              category: "",
+            },
+          ],
+          previewStartSec: previewStartSec,
+        }
+      );
 
       if (!result) {
         return false;

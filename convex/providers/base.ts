@@ -1,9 +1,14 @@
 import {
+  PreviewDownload,
+  YTSearchResponse,
+  YTSearchResultItem,
+} from "@/lib/typings";
+import {
   Album,
   Artist,
-  Track,
   LyricResponse,
   LyricSource,
+  Track,
 } from "../utils/typings";
 
 export type MapperFn<T> = (raw: Record<string, any>) => T | undefined;
@@ -16,15 +21,23 @@ export interface MusicProvider {
   getArtistById: (artistId: string) => Promise<Artist | undefined>;
 }
 
-export interface LyricProvider {
+export interface AudioLyricProvider {
   getLyricsByTrack: (
     source: LyricSource,
     artist: string,
     title: string
   ) => Promise<LyricResponse | undefined>;
   getLyricsByAlbum?: (tracks: Track[]) => Promise<string | undefined>;
-}
-
-export interface AudioProvider {
-  // TODO implement getting audio from a source
+  searchYT: (
+    title: string,
+    artist: string,
+    durationSec: number
+  ) => Promise<YTSearchResponse | undefined>;
+  downloadYTAudioPreview: (
+    trackId: string,
+    candidates: YTSearchResultItem[],
+    bitrateKbps?: number,
+    previewStartSec?: number,
+    previewLenSec?: number
+  ) => Promise<PreviewDownload | undefined>;
 }

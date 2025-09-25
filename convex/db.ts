@@ -493,42 +493,63 @@ export const getAlbumContentFlags = query({
     }[] = [];
 
     for (const albumId of albumIds) {
-      let hasExplicit = false;
-      let hasLyrics = false;
-      let hasAudio = false;
-
       const links = await ctx.db
         .query("album_track")
         .withIndex("by_album_id", (q) => q.eq("album_id", albumId))
         .collect();
 
-      for (const link of links) {
-        const track = await ctx.db.get(link.track_id);
-        if (!track) continue;
-
-        if (track.explicit_flag) hasExplicit = true;
-
-        const md = (track.metadata ?? {}) as any;
-        if (
-          md?.audio_url ||
-          md?.preview_url ||
-          (Array.isArray(md?.audio_urls) && md.audio_urls.length > 0)
-        ) {
-          hasAudio = true;
-        }
-
-        if (!hasLyrics) {
-          const oneLyric = await ctx.db
-            .query("lyric_variant")
-            .withIndex("by_track_id", (q) => q.eq("track_id", track._id))
-            .first();
-          if (oneLyric) hasLyrics = true;
-        }
-
-        if (hasExplicit && hasLyrics && hasAudio) break;
+      if (links.length === 0) {
+        results.push({
+          albumId,
+          hasExplicit: false,
+          hasLyrics: false,
+          hasAudio: false,
+        });
+        continue;
       }
 
-      results.push({ albumId, hasExplicit, hasLyrics, hasAudio });
+      const trackIds = links.map((link) => link.track_id);
+      const tracks = await Promise.all(trackIds.map((id) => ctx.db.get(id)));
+      const validTracks = tracks.filter((t): t is Doc<"track"> => !!t);
+
+      if (validTracks.length !== trackIds.length) {
+        results.push({
+          albumId,
+          hasExplicit: validTracks.some((t) => t.explicit_flag),
+          hasLyrics: false,
+          hasAudio: false,
+        });
+        continue;
+      }
+
+      const hasExplicit = validTracks.some((track) => track.explicit_flag);
+
+      const lyricChecks = await Promise.all(
+        validTracks.map((track) =>
+          ctx.db
+            .query("lyric_variant")
+            .withIndex("by_track_id", (q) => q.eq("track_id", track._id))
+            .first()
+        )
+      );
+      const allHaveLyrics = lyricChecks.every((l) => l !== null);
+
+      const audioChecks = await Promise.all(
+        validTracks.map((track) =>
+          ctx.db
+            .query("audio_preview")
+            .withIndex("by_track_id", (q) => q.eq("trackId", track._id))
+            .first()
+        )
+      );
+      const allHaveAudio = audioChecks.every((a) => a !== null);
+
+      results.push({
+        albumId,
+        hasExplicit,
+        hasLyrics: allHaveLyrics,
+        hasAudio: allHaveAudio,
+      });
     }
 
     return results;
