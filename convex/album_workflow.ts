@@ -18,12 +18,14 @@ export const workflow = new WorkflowManager(components.workflow, {
 const lyric = internal.lyric;
 const db = internal.db;
 const spot = internal.spotify;
+const audio = internal.audio;
 
 export const albumWorkflow = workflow.define({
   args: { albumId: v.string() },
   handler: async (step, { albumId }): Promise<void> => {
     const spotifyRetry = { maxAttempts: 5, initialBackoffMs: 300, base: 2 };
     const lyricRetry = { maxAttempts: 6, initialBackoffMs: 300, base: 2 };
+    const audioRetry = { maxAttempts: 3, initialBackoffMs: 300, base: 2 };
 
     // 1) Fetch album and upsert
     const album = await step.runAction(
@@ -120,6 +122,13 @@ export const albumWorkflow = workflow.define({
           lyric.fetchLyricsInternal,
           { trackId },
           { retry: lyricRetry, name: "lyric.fetchLyrics" }
+        );
+
+        // TODO fix here
+        await step.runAction(
+          audio.fetchTrackPreviewInternal,
+          { trackId },
+          { retry: audioRetry, name: "audio.fetchTrackPreview" }
         );
 
         return trackId;

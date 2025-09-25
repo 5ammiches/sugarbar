@@ -1,19 +1,20 @@
-import { logger } from "@/lib/utils";
-import { AudioLyricProvider, MapperFn } from "../base";
 import {
-  LyricSource,
-  LyricResponseSchema,
-  YTSearchResponseSchema,
-  YTPreviewResponse,
-  LyricResponse,
-  YTSearchResponse,
   PreviewDownload,
   YTPreviewResponseSchema,
+  YTSearchResponse,
+  YTSearchResponseSchema,
+  YTSearchResultItem,
 } from "@/lib/typings";
-import z, { ZodError } from "zod";
-import { internalAction } from "../../_generated/server";
+import { logger } from "@/lib/utils";
+import z from "zod";
+import {
+  LyricResponse,
+  LyricResponseSchema,
+  LyricSource,
+} from "../../utils/typings";
+import { AudioLyricProvider } from "../base";
 
-export class PythonProvider implements AudioLyricProvider {
+export class PythonMusicProvider implements AudioLyricProvider {
   private BASE_URL: string;
 
   constructor(private baseUrl?: string) {
@@ -29,9 +30,7 @@ export class PythonProvider implements AudioLyricProvider {
     title: string,
     artist: string
   ): Promise<LyricResponse | undefined> {
-    const url =
-      `${this.BASE_URL}/api/lyrics/${encodeURIComponent(source)}` +
-      `?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`;
+    const url = `${this.BASE_URL}/api/lyrics/${encodeURIComponent(source)}`;
 
     const resp = await fetch(url, {
       method: "POST",
@@ -46,7 +45,10 @@ export class PythonProvider implements AudioLyricProvider {
       },
     });
 
-    const isJson = resp.headers.get("content-type")?.toLowerCase().includes("application/json");
+    const isJson = resp.headers
+      .get("content-type")
+      ?.toLowerCase()
+      .includes("application/json");
 
     if (!resp.ok) {
       let detail = `${resp.status} ${resp.statusText}`;
@@ -55,7 +57,9 @@ export class PythonProvider implements AudioLyricProvider {
           const errBody = await resp.json();
           if (errBody?.detail) {
             detail =
-              typeof errBody.detail === "string" ? errBody.detail : JSON.stringify(errBody.detail);
+              typeof errBody.detail === "string"
+                ? errBody.detail
+                : JSON.stringify(errBody.detail);
           }
         } else {
           const text = await resp.text();
@@ -99,9 +103,9 @@ export class PythonProvider implements AudioLyricProvider {
     const resp = await fetch(url, {
       method: "POST",
       body: JSON.stringify({
-        title: title,
-        artist: artist,
-        durationSec: durationSec,
+        title,
+        artist,
+        durationSec,
       }),
       headers: {
         Accept: "application/json",
@@ -109,7 +113,10 @@ export class PythonProvider implements AudioLyricProvider {
       },
     });
 
-    const isJson = resp.headers.get("content-type")?.toLowerCase().includes("application/json");
+    const isJson = resp.headers
+      .get("content-type")
+      ?.toLowerCase()
+      .includes("application/json");
 
     if (!resp.ok) {
       let detail = `${resp.status} ${resp.statusText}`;
@@ -118,7 +125,9 @@ export class PythonProvider implements AudioLyricProvider {
           const errBody = await resp.json();
           if (errBody?.detail) {
             detail =
-              typeof errBody.detail === "string" ? errBody.detail : JSON.stringify(errBody.detail);
+              typeof errBody.detail === "string"
+                ? errBody.detail
+                : JSON.stringify(errBody.detail);
           }
         } else {
           const text = await resp.text();
@@ -154,16 +163,17 @@ export class PythonProvider implements AudioLyricProvider {
 
   async downloadYTAudioPreview(
     trackId: string,
-    candidateUrls: string[],
+    candidates: YTSearchResultItem[],
     bitrateKbps?: number,
     previewStartSec?: number,
     previewLenSec?: number
   ): Promise<PreviewDownload | undefined> {
+    // Call the Python service preview-search
     const url = `${this.BASE_URL}/api/youtube/preview-scrape`;
 
     const body: Record<string, any> = {
       trackId,
-      candidateUrls,
+      candidates,
     };
 
     if (bitrateKbps !== undefined) body.bitrateKbps = bitrateKbps;
@@ -179,7 +189,10 @@ export class PythonProvider implements AudioLyricProvider {
       },
     });
 
-    const isJson = res.headers.get("content-type")?.toLowerCase().includes("application/json");
+    const isJson = res.headers
+      .get("content-type")
+      ?.toLowerCase()
+      .includes("application/json");
 
     if (!res.ok) {
       let detail = `${res.status} ${res.statusText}`;
@@ -188,7 +201,9 @@ export class PythonProvider implements AudioLyricProvider {
           const errBody = await res.json();
           if (errBody?.detail) {
             detail =
-              typeof errBody.detail === "string" ? errBody.detail : JSON.stringify(errBody.detail);
+              typeof errBody.detail === "string"
+                ? errBody.detail
+                : JSON.stringify(errBody.detail);
           }
         } else {
           const text = await res.text();
@@ -211,8 +226,11 @@ export class PythonProvider implements AudioLyricProvider {
       const blob = await res.blob();
       const meta = YTPreviewResponseSchema.parse({
         sourceUrl: res.headers.get("X-Source-Url"),
-        contentType: res.headers.get("Content-Type") ?? (blob.type || "audio/mp4"),
-        durationSec: Number(res.headers.get("X-Preview-Duration") ?? previewLenSec),
+        contentType:
+          res.headers.get("Content-Type") ?? (blob.type || "audio/mp4"),
+        durationSec: Number(
+          res.headers.get("X-Preview-Duration") ?? previewLenSec
+        ),
         bitrateKbps: Number(res.headers.get("X-Bitrate-Kbps") ?? bitrateKbps),
         codec: res.headers.get("X-Codec") ?? "aac",
       });
@@ -220,12 +238,15 @@ export class PythonProvider implements AudioLyricProvider {
       return { blob, meta };
     } catch (err) {
       if (err instanceof z.ZodError) {
-        logger.error(`Youtube: preview download response payload parse failed`, {
-          trackId,
-          issues: err.issues,
-        });
+        logger.error(
+          `Youtube: preview download response payload parse failed`,
+          {
+            trackId,
+            issues: err.issues,
+          }
+        );
       }
-      throw new Error(`Youtube: Unexpected search response shape`);
+      throw new Error(`Youtube: Unexpected preview response shape`);
     }
   }
 }

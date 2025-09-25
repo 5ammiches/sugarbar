@@ -1,15 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { convexQuery, useConvex } from "@convex-dev/react-query";
 import { api } from "@/../convex/_generated/api";
 import { Id } from "@/../convex/_generated/dataModel";
+import { useConvex } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -18,10 +17,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Download, Clock, ExternalLink, RefreshCw, PlayCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Clock,
+  Download,
+  ExternalLink,
+  PlayCircle,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 
 interface YouTubeSearchResult {
   videoId: string;
@@ -97,27 +104,49 @@ function SearchResultCard({
   onSelect,
   onDownload,
   isDownloading,
+  downloadDisabledReason,
 }: {
   result: YouTubeSearchResult;
   expectedDuration?: number;
   onSelect: () => void;
-  onDownload: () => void;
+  onDownload: (result: YouTubeSearchResult, previewStartSec: number) => void;
   isDownloading: boolean;
+  downloadDisabledReason?: string | null;
 }) {
   const [showEmbed, setShowEmbed] = useState(false);
+  const [previewStartInput, setPreviewStartInput] = useState<string>("0");
+  const [previewStartError, setPreviewStartError] = useState<string | null>(
+    null
+  );
 
   const matchQuality = expectedDuration
     ? getDurationMatchQuality(result.durationSec, expectedDuration)
     : "good";
 
   const matchColors = {
-    perfect: "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400",
+    perfect:
+      "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400",
     good: "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400",
     fair: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400",
     poor: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400",
   };
 
   const thumbnailUrl = `https://img.youtube.com/vi/${result.videoId}/hqdefault.jpg`;
+
+  const handleDownloadClick = () => {
+    // validate previewStartInput locally and call onDownload
+    const parsed = Number.parseInt(previewStartInput || "0", 10);
+    if (Number.isNaN(parsed) || parsed < 0) {
+      setPreviewStartError("Start must be 0 or greater (seconds)");
+      return;
+    }
+    if (result.durationSec && parsed >= result.durationSec) {
+      setPreviewStartError("Start must be less than video duration");
+      return;
+    }
+    setPreviewStartError(null);
+    onDownload(result, parsed);
+  };
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow">
@@ -160,7 +189,9 @@ function SearchResultCard({
         )}
 
         <div className="space-y-2">
-          <h4 className="font-medium text-sm line-clamp-2 leading-tight">{result.title}</h4>
+          <h4 className="font-medium text-sm line-clamp-2 leading-tight">
+            {result.title}
+          </h4>
 
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="outline" className="text-xs">
@@ -179,24 +210,55 @@ function SearchResultCard({
           </div>
 
           <div className="flex items-center gap-2 pt-1">
-            <Button size="sm" variant="outline" onClick={onSelect} className="flex-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onSelect}
+              className="flex-1"
+            >
               <ExternalLink className="h-4 w-4 mr-2" />
               Open in YouTube
             </Button>
 
-            <Button size="sm" onClick={onDownload} disabled={isDownloading} className="flex-1">
-              {isDownloading ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Downloading...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4 mr-2" />
-                  Use This Audio
-                </>
-              )}
-            </Button>
+            <div className="flex-1 flex items-center gap-2">
+              <Input
+                value={previewStartInput}
+                onChange={(e) => setPreviewStartInput(e.target.value)}
+                className="w-24"
+                placeholder="Start (s)"
+                aria-label="Preview start seconds"
+              />
+              <div className="flex-1">
+                <Button
+                  size="sm"
+                  onClick={handleDownloadClick}
+                  disabled={isDownloading || !!downloadDisabledReason}
+                  className="w-full"
+                >
+                  {isDownloading ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Use This Audio
+                    </>
+                  )}
+                </Button>
+                {previewStartError && (
+                  <div className="text-xs text-destructive mt-1">
+                    {previewStartError}
+                  </div>
+                )}
+                {downloadDisabledReason && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {downloadDisabledReason}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </CardContent>
@@ -235,7 +297,13 @@ export function YouTubeSearchDialog({
     error,
     refetch,
   } = useQuery({
-    queryKey: ["youtube-search", searchTitle, searchArtist, expectedDuration, hasSearched],
+    queryKey: [
+      "youtube-search",
+      searchTitle,
+      searchArtist,
+      expectedDuration,
+      hasSearched,
+    ],
     queryFn: async () => {
       if (!hasSearched || !searchTitle.trim() || !searchArtist.trim()) {
         return [];
@@ -259,30 +327,6 @@ export function YouTubeSearchDialog({
     }
   }, [searchTitle, searchArtist]);
 
-  const handleDownloadAudio = async (result: YouTubeSearchResult) => {
-    if (!trackId) return;
-
-    setDownloadingVideo(result.videoId);
-
-    try {
-      const success = await convex.action(api.audio.fetchAudioPreviewFromUrl, {
-        trackId,
-        youtubeUrl: result.url,
-      });
-
-      if (success) {
-        onDownloadSuccess?.();
-        onClose();
-      } else {
-        console.error("Failed to download audio: No result returned");
-      }
-    } catch (error) {
-      console.error("Failed to download audio:", error);
-    } finally {
-      setDownloadingVideo(null);
-    }
-  };
-
   const handleOpenInYouTube = (result: YouTubeSearchResult) => {
     window.open(result.url, "_blank", "noopener,noreferrer");
   };
@@ -293,13 +337,57 @@ export function YouTubeSearchDialog({
     }
   };
 
+  const handleDownloadAudio = async (
+    result: YouTubeSearchResult,
+    previewStartSec: number
+  ) => {
+    if (!trackId) {
+      console.error("No trackId provided, cannot download audio");
+      return;
+    }
+
+    // validate again as a safety net
+    const parsed = Number.parseInt(String(previewStartSec || 0), 10);
+    if (Number.isNaN(parsed) || parsed < 0) {
+      console.error("Invalid preview start seconds");
+      return;
+    }
+    if (result.durationSec && parsed >= result.durationSec) {
+      console.error("Preview start must be less than video duration");
+      return;
+    }
+
+    setDownloadingVideo(result.videoId);
+
+    try {
+      const success = await convex.action(api.audio.fetchAudioPreviewFromUrl, {
+        trackId,
+        youtubeUrl: result.url,
+        previewStartSec: parsed,
+      });
+
+      if (success) {
+        onDownloadSuccess?.();
+        // Close dialog after successful download
+        onClose();
+      } else {
+        console.error("Failed to download audio: No result returned");
+      }
+    } catch (err) {
+      console.error("Failed to download audio:", err);
+    } finally {
+      setDownloadingVideo(null);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>YouTube Audio Search</DialogTitle>
           <DialogDescription>
-            Search for the right YouTube video and download its audio for this track
+            Search for the right YouTube video and download its audio for this
+            track
           </DialogDescription>
         </DialogHeader>
 
@@ -338,7 +426,10 @@ export function YouTubeSearchDialog({
 
           {expectedDuration && (
             <div className="text-sm text-muted-foreground">
-              Expected duration: <Badge variant="outline">{formatDuration(expectedDuration)}</Badge>
+              Expected duration:{" "}
+              <Badge variant="outline">
+                {formatDuration(expectedDuration)}
+              </Badge>
             </div>
           )}
 
@@ -355,7 +446,11 @@ export function YouTubeSearchDialog({
               {error && (
                 <div className="text-center py-8 text-destructive">
                   <p>Failed to search YouTube. Please try again.</p>
-                  <Button variant="outline" onClick={() => refetch()} className="mt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => refetch()}
+                    className="mt-2"
+                  >
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Retry
                   </Button>
@@ -376,9 +471,12 @@ export function YouTubeSearchDialog({
               {!hasSearched && (
                 <div className="text-center py-16 text-muted-foreground">
                   <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium mb-2">Ready to search YouTube</p>
+                  <p className="text-lg font-medium mb-2">
+                    Ready to search YouTube
+                  </p>
                   <p className="text-sm">
-                    Enter a track title and artist, then click Search to find videos
+                    Enter a track title and artist, then click Search to find
+                    videos
                   </p>
                 </div>
               )}
@@ -391,8 +489,13 @@ export function YouTubeSearchDialog({
                       result={result}
                       expectedDuration={expectedDuration}
                       onSelect={() => handleOpenInYouTube(result)}
-                      onDownload={() => handleDownloadAudio(result)}
+                      onDownload={(res, startSec) =>
+                        handleDownloadAudio(res, startSec)
+                      }
                       isDownloading={downloadingVideo === result.videoId}
+                      downloadDisabledReason={
+                        !trackId ? "No track selected" : null
+                      }
                     />
                   ))}
                 </div>

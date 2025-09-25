@@ -1,25 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { GenreTagSelector } from "@/components/albums/genre-tag-selector";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { convexQuery, useConvex } from "@convex-dev/react-query";
 import { api } from "@/../convex/_generated/api";
 import { Doc, Id } from "@/../convex/_generated/dataModel";
+import { GenreTagSelector } from "@/components/albums/genre-tag-selector";
+import { convexQuery, useConvex } from "@convex-dev/react-query";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -28,20 +17,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  Save,
-  X,
-  ChevronDown,
-  ChevronRight,
-  RefreshCw,
-  Trash2,
-  Plus,
-} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
+import { RefreshCw, Save, X } from "lucide-react";
+
+import TrackEditor from "@/components/albums/track-editor";
+import { YouTubeSearchDialog } from "@/components/albums/youtube-search-dialog";
+import { SingleAudioProvider } from "@/hooks/use-single-audio";
 
 type AlbumDetailsResponse = {
   album: Doc<"album">;
@@ -142,6 +127,15 @@ export function AlbumEditorDrawer({
     {}
   );
 
+  // YouTube search dialog state per-drawer; each TrackEditor will reuse this
+  const [youtubeDialog, setYoutubeDialog] = useState<{
+    open: boolean;
+    trackId?: Id<"track">;
+    title?: string;
+    artist?: string;
+    expectedDuration?: number;
+  }>({ open: false });
+
   // Custome query dialog for custom lyric requests
   const [customQueryDialog, setCustomQueryDialog] = useState<{
     open: boolean;
@@ -165,7 +159,22 @@ export function AlbumEditorDrawer({
   const { data: details, refetch } = useQuery({
     ...convexQuery(api.db.getAlbumDetails, albumId ? { albumId } : "skip"),
     enabled: !!albumId && open,
+  }) as {
+    data: AlbumDetailsResponse | undefined;
+    refetch: (options?: any) => Promise<any>;
+  };
+
+  const { data: previewTrackIds } = useQuery({
+    ...convexQuery(
+      api.audio.getPreviewTrackIdsForAlbum,
+      albumId ? { albumId } : "skip"
+    ),
+    enabled: !!albumId && open,
   });
+
+  const previewTrackIdSet = useMemo(() => {
+    return new Set(previewTrackIds ?? []);
+  }, [previewTrackIds]);
 
   useEffect(() => {
     if (!open) {
@@ -398,6 +407,9 @@ export function AlbumEditorDrawer({
     genreIds.length !== genres.length ||
     !genreIds.every((id) => genres.some((g) => g._id === id));
 
+  // TrackEditor has been moved to a separate component file:
+  // see `src/components/albums/track-editor.tsx` and import above.
+
   return (
     <>
       <Sheet open={open} onOpenChange={onClose}>
@@ -412,307 +424,143 @@ export function AlbumEditorDrawer({
           </VisuallyHidden>
 
           <ScrollArea className="h-full">
-            <div className="p-6 space-y-6">
-              {/* Album Header */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">Edit Album</h2>
-                  <p className="text-muted-foreground">
-                    {primaryArtist?.name ?? "Unknown Artist"}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  {(hasAlbumChanges || hasGenreChanges) && (
-                    <Button
-                      onClick={saveAlbum}
-                      disabled={savingAlbum}
-                      size="sm"
-                    >
-                      {savingAlbum ? (
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Save className="h-4 w-4 mr-2" />
-                      )}
-                      Save Album
+            <SingleAudioProvider>
+              <div className="p-6 space-y-6">
+                {/* Album Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold">Edit Album</h2>
+                    <p className="text-muted-foreground">
+                      {primaryArtist?.name ?? "Unknown Artist"}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {(hasAlbumChanges || hasGenreChanges) && (
+                      <Button
+                        onClick={saveAlbum}
+                        disabled={savingAlbum}
+                        size="sm"
+                      >
+                        {savingAlbum ? (
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4 mr-2" />
+                        )}
+                        Save Album
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" onClick={onClose}>
+                      <X className="h-4 w-4 mr-2" />
+                      Close
                     </Button>
-                  )}
-                  <Button variant="outline" size="sm" onClick={onClose}>
-                    <X className="h-4 w-4 mr-2" />
-                    Close
-                  </Button>
-                </div>
-              </div>
-
-              {/* Album Details */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Album Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <EditableField
-                    label="Title"
-                    value={albumState.title ?? album.title}
-                    onChange={(value) => handleAlbumChange("title", value)}
-                    placeholder="Album title"
-                  />
-
-                  <EditableField
-                    label="Edition Tag"
-                    value={albumState.edition_tag ?? album.edition_tag}
-                    onChange={(value) =>
-                      handleAlbumChange("edition_tag", value)
-                    }
-                    placeholder="e.g., Deluxe, Remaster"
-                  />
-
-                  <EditableField
-                    label="Release Date"
-                    value={albumState.release_date ?? album.release_date}
-                    onChange={(value) =>
-                      handleAlbumChange("release_date", value)
-                    }
-                    type="date"
-                  />
-
-                  <EditableField
-                    label="Total Tracks"
-                    value={albumState.total_tracks ?? album.total_tracks}
-                    onChange={(value) =>
-                      handleAlbumChange("total_tracks", value)
-                    }
-                    type="number"
-                  />
+                  </div>
                 </div>
 
-                <div className="col-span-full">
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">
-                    Genres
-                  </label>
-                  <GenreTagSelector
-                    selectedGenreIds={genreIds}
-                    onGenresChange={setGenreIds}
-                    placeholder="Search and select genres..."
-                  />
+                {/* Album Details */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Album Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <EditableField
+                      label="Title"
+                      value={albumState.title ?? album.title}
+                      onChange={(value) => handleAlbumChange("title", value)}
+                      placeholder="Album title"
+                    />
+
+                    <EditableField
+                      label="Edition Tag"
+                      value={albumState.edition_tag ?? album.edition_tag}
+                      onChange={(value) =>
+                        handleAlbumChange("edition_tag", value)
+                      }
+                      placeholder="e.g., Deluxe, Remaster"
+                    />
+
+                    <EditableField
+                      label="Release Date"
+                      value={albumState.release_date ?? album.release_date}
+                      onChange={(value) =>
+                        handleAlbumChange("release_date", value)
+                      }
+                      type="date"
+                    />
+
+                    <EditableField
+                      label="Total Tracks"
+                      value={albumState.total_tracks ?? album.total_tracks}
+                      onChange={(value) =>
+                        handleAlbumChange("total_tracks", value)
+                      }
+                      type="number"
+                    />
+                  </div>
+
+                  <div className="col-span-full">
+                    <label className="text-sm font-medium text-muted-foreground mb-1 block">
+                      Genres
+                    </label>
+                    <GenreTagSelector
+                      selectedGenreIds={genreIds}
+                      onGenresChange={setGenreIds}
+                      placeholder="Search and select genres..."
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Tracks */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">
+                    Tracks ({tracks.length})
+                  </h3>
+
+                  {tracks.map((entry, index) => (
+                    <TrackEditor
+                      key={entry.track._id}
+                      entry={entry}
+                      index={index}
+                      open={open}
+                      tracksState={tracksState}
+                      variantsState={variantsState}
+                      savingTracks={savingTracks}
+                      retrying={retrying}
+                      expandedTracks={expandedTracks}
+                      setExpandedTracks={setExpandedTracks}
+                      handleTrackChange={handleTrackChange}
+                      handleVariantChange={handleVariantChange}
+                      saveTrack={saveTrack}
+                      retryLyrics={retryLyrics}
+                      openCustomQueryDialog={openCustomQueryDialog}
+                      setYoutubeDialog={setYoutubeDialog}
+                      refetch={refetch}
+                      previewTrackIdSet={previewTrackIdSet}
+                      onDeleteVariant={(variantId, source) =>
+                        openDeleteConfirmDialog(variantId, source)
+                      }
+                    />
+                  ))}
                 </div>
               </div>
-
-              <Separator />
-
-              {/* Tracks */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">
-                  Tracks ({tracks.length})
-                </h3>
-
-                {tracks.map((entry, index) => {
-                  const { track, artist, lyric_variants } = entry;
-                  const trackId = track._id;
-                  const isExpanded = expandedTracks[trackId];
-                  const hasTrackChanges =
-                    Object.keys(tracksState[trackId] || {}).length > 0;
-                  const hasVariantChanges = lyric_variants.some(
-                    (v) => Object.keys(variantsState[v._id] || {}).length > 0
-                  );
-                  const isSaving = savingTracks[trackId];
-                  const isRetrying = retrying[trackId];
-
-                  return (
-                    <div key={trackId} className="border rounded-lg p-4">
-                      <Collapsible>
-                        <div className="flex items-center justify-between">
-                          <CollapsibleTrigger
-                            onClick={() => toggleTrack(trackId)}
-                            className="flex items-center gap-2 text-left hover:bg-muted/50 p-2 rounded"
-                          >
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                            <div>
-                              <div className="font-medium">
-                                {index + 1}. {track.title}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {artist?.name} •{" "}
-                                {Math.round(track.duration_ms / 1000)}s
-                                {track.explicit_flag && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="ml-2 text-xs"
-                                  >
-                                    E
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </CollapsibleTrigger>
-
-                          <div className="flex gap-2">
-                            {(hasTrackChanges || hasVariantChanges) && (
-                              <Button
-                                onClick={() => saveTrack(trackId)}
-                                disabled={isSaving}
-                                size="sm"
-                                variant="outline"
-                              >
-                                {isSaving ? (
-                                  <RefreshCw className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Save className="h-4 w-4" />
-                                )}
-                              </Button>
-                            )}
-
-                            <Button
-                              onClick={() => retryLyrics(trackId)}
-                              disabled={isRetrying}
-                              size="sm"
-                              variant="outline"
-                            >
-                              {isRetrying ? (
-                                <RefreshCw className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <RefreshCw className="h-4 w-4" />
-                              )}
-                            </Button>
-
-                            <Button
-                              onClick={() => openCustomQueryDialog(trackId)}
-                              size="sm"
-                              variant="outline"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        <CollapsibleContent>
-                          {isExpanded && (
-                            <div className="mt-4 space-y-4">
-                              {/* Track Details */}
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <EditableField
-                                  label="Title"
-                                  value={
-                                    tracksState[trackId]?.title ?? track.title
-                                  }
-                                  onChange={(value) =>
-                                    handleTrackChange(trackId, "title", value)
-                                  }
-                                />
-
-                                <EditableField
-                                  label="Track Number"
-                                  value={
-                                    tracksState[trackId]?.track_number ??
-                                    track.track_number
-                                  }
-                                  onChange={(value) =>
-                                    handleTrackChange(
-                                      trackId,
-                                      "track_number",
-                                      value
-                                    )
-                                  }
-                                  type="number"
-                                />
-
-                                <EditableField
-                                  label="Duration (ms)"
-                                  value={
-                                    tracksState[trackId]?.duration_ms ??
-                                    track.duration_ms
-                                  }
-                                  onChange={(value) =>
-                                    handleTrackChange(
-                                      trackId,
-                                      "duration_ms",
-                                      value
-                                    )
-                                  }
-                                  type="number"
-                                />
-
-                                <EditableField
-                                  label="ISRC"
-                                  value={
-                                    tracksState[trackId]?.isrc ?? track.isrc
-                                  }
-                                  onChange={(value) =>
-                                    handleTrackChange(trackId, "isrc", value)
-                                  }
-                                />
-                              </div>
-
-                              {/* Lyric Variants */}
-                              {lyric_variants.length > 0 && (
-                                <div className="space-y-3">
-                                  <h4 className="font-medium">Lyrics</h4>
-                                  {lyric_variants.map((variant) => (
-                                    <div
-                                      key={variant._id}
-                                      className="border rounded p-3 space-y-3"
-                                    >
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <Badge variant="outline">
-                                            {variant.source}
-                                          </Badge>
-                                          {variant.url && (
-                                            <a
-                                              href={variant.url}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="text-xs text-blue-600 hover:underline"
-                                            >
-                                              View Source
-                                            </a>
-                                          )}
-                                        </div>
-                                        <Button
-                                          onClick={() =>
-                                            openDeleteConfirmDialog(
-                                              variant._id,
-                                              variant.source
-                                            )
-                                          }
-                                          size="sm"
-                                          variant="outline"
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-
-                                      <Textarea
-                                        value={
-                                          variantsState[variant._id]?.lyrics ??
-                                          variant.lyrics
-                                        }
-                                        onChange={(e) =>
-                                          handleVariantChange(
-                                            variant._id,
-                                            "lyrics",
-                                            e.target.value
-                                          )
-                                        }
-                                        placeholder="Lyrics..."
-                                        className="min-h-[200px] font-mono text-sm"
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </CollapsibleContent>
-                      </Collapsible>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            </SingleAudioProvider>
           </ScrollArea>
         </SheetContent>
       </Sheet>
+
+      {/* YouTube Search Dialog (shared instance) */}
+      <YouTubeSearchDialog
+        open={youtubeDialog.open}
+        onClose={() => setYoutubeDialog((prev) => ({ ...prev, open: false }))}
+        trackId={youtubeDialog.trackId}
+        initialTitle={youtubeDialog.title}
+        initialArtist={youtubeDialog.artist}
+        expectedDuration={youtubeDialog.expectedDuration}
+        onDownloadSuccess={() => {
+          // Refresh album data and clear dialog
+          refetch();
+          setYoutubeDialog({ open: false });
+        }}
+      />
 
       {/* Custom Query Dialog */}
       <Dialog

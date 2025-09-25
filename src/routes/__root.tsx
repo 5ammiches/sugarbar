@@ -8,12 +8,12 @@ import { getAuth } from "@clerk/tanstack-react-start/server";
 import { Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
+import { getWebRequest } from "@tanstack/react-start/server";
 import * as React from "react";
 import "../../app/globals.css";
 
 const fetchClerkAuth = createServerFn({ method: "GET" }).handler(async () => {
-  const { userId } = await getAuth(getRequest());
+  const { userId } = await getAuth(getWebRequest());
 
   return {
     userId,
@@ -21,13 +21,13 @@ const fetchClerkAuth = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const Route = createRootRoute({
-  // beforeLoad: async () => {
-  //   const { userId } = await fetchClerkAuth();
+  beforeLoad: async () => {
+    const { userId } = await fetchClerkAuth();
 
-  //   return {
-  //     userId,
-  //   };
-  // },
+    return {
+      userId,
+    };
+  },
   head: () => ({
     meta: [
       {

@@ -1,10 +1,16 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useImperativeHandle, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { useSingleAudio } from "@/hooks/use-single-audio";
+import { Pause, Play, Volume2, VolumeX } from "lucide-react";
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 
 function formatDuration(ms?: number): string {
   const v = typeof ms === "number" ? Math.max(0, Math.floor(ms / 1000)) : 0;
@@ -24,22 +30,37 @@ interface AudioPlayerProps {
   artist: string;
   duration: number;
   className?: string;
+  audioRef?: React.RefObject<HTMLAudioElement>;
+  autoPlay?: boolean;
 }
 
 export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
-  ({ src, title, artist, duration, className }, ref) => {
+  (
+    {
+      src,
+      title,
+      artist,
+      duration,
+      className,
+      audioRef: audioRefProp,
+      autoPlay,
+    },
+    ref
+  ) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [audioDuration, setAudioDuration] = useState(0);
     const [volume, setVolume] = useState(1);
     const [isMuted, setIsMuted] = useState(false);
-    const audioRef = useRef<HTMLAudioElement>(null);
+    const internalAudioRef = useRef<HTMLAudioElement>(null);
+    const effectiveAudioRef = (audioRefProp ??
+      internalAudioRef) as React.RefObject<HTMLAudioElement>;
 
     const { requestPlay, notifyPause } = useSingleAudio();
 
     // Keep context informed + keep internal state in sync with native events
     useEffect(() => {
-      const a = audioRef.current;
+      const a = effectiveAudioRef.current;
       if (!a) return;
 
       const onPlay = () => {
@@ -77,14 +98,14 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       ref,
       () => ({
         play: () => {
-          const a = audioRef.current;
+          const a = effectiveAudioRef.current;
           if (!a || !src) return;
           requestPlay(a);
           a.play().catch(() => {});
           // isPlaying will be set by the "play" event
         },
         pause: () => {
-          const a = audioRef.current;
+          const a = effectiveAudioRef.current;
           if (!a) return;
           a.pause();
           // isPlaying will be set by the "pause" event
@@ -93,8 +114,17 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
       [src, requestPlay, notifyPause]
     );
 
+    useEffect(() => {
+      if (!autoPlay || !src) return;
+      const a = effectiveAudioRef.current;
+      if (a) {
+        requestPlay(a);
+        a.play().catch(() => {});
+      }
+    }, [autoPlay, src, requestPlay, audioRefProp]);
+
     const togglePlay = () => {
-      const a = audioRef.current;
+      const a = effectiveAudioRef.current;
       if (!a || !src) return;
 
       if (isPlaying) {
@@ -106,7 +136,7 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
     };
 
     const handleSeek = (value: number[]) => {
-      const a = audioRef.current;
+      const a = effectiveAudioRef.current;
       if (!a) return;
       const newTime = value[0];
       a.currentTime = newTime;
@@ -114,7 +144,7 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
     };
 
     const handleVolumeChange = (value: number[]) => {
-      const a = audioRef.current;
+      const a = effectiveAudioRef.current;
       if (!a) return;
       const newVolume = value[0];
       a.volume = newVolume;
@@ -123,7 +153,7 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
     };
 
     const toggleMute = () => {
-      const a = audioRef.current;
+      const a = effectiveAudioRef.current;
       if (!a) return;
       if (isMuted) {
         a.volume = volume;
@@ -136,7 +166,9 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
 
     if (!src) {
       return (
-        <div className={`flex items-center gap-3 p-3 bg-muted/50 rounded-lg ${className}`}>
+        <div
+          className={`flex items-center gap-3 p-3 bg-muted/50 rounded-lg ${className}`}
+        >
           <Button size="icon" variant="ghost" disabled className="h-8 w-8">
             <Play className="h-4 w-4" />
           </Button>
@@ -144,18 +176,29 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
             <p className="text-sm font-medium truncate">{title}</p>
             <p className="text-xs text-muted-foreground truncate">{artist}</p>
           </div>
-          <span className="text-xs text-muted-foreground">No audio available</span>
+          <span className="text-xs text-muted-foreground">
+            No audio available
+          </span>
         </div>
       );
     }
 
     return (
       <div className={`space-y-3 p-3 bg-muted/50 rounded-lg ${className}`}>
-        <audio ref={audioRef} src={src} preload="metadata" />
+        <audio ref={effectiveAudioRef} src={src} preload="metadata" />
 
         <div className="flex items-center gap-3">
-          <Button size="icon" variant="ghost" onClick={togglePlay} className="h-8 w-8">
-            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={togglePlay}
+            className="h-8 w-8"
+          >
+            {isPlaying ? (
+              <Pause className="h-4 w-4" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
           </Button>
 
           <div className="flex-1 min-w-0">
@@ -164,8 +207,17 @@ export const AudioPlayer = forwardRef<AudioPlayerHandle, AudioPlayerProps>(
           </div>
 
           <div className="flex items-center gap-2">
-            <Button size="icon" variant="ghost" onClick={toggleMute} className="h-6 w-6">
-              {isMuted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={toggleMute}
+              className="h-6 w-6"
+            >
+              {isMuted ? (
+                <VolumeX className="h-3 w-3" />
+              ) : (
+                <Volume2 className="h-3 w-3" />
+              )}
             </Button>
             <div className="w-16">
               <Slider

@@ -1,8 +1,7 @@
 "use client";
 
-import * as React from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle } from "lucide-react";
 
 type AlbumCardAlbum = {
@@ -48,6 +47,8 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
     album.artistName ?? album.primary_artist_name ?? "Unknown Artist";
 
   const hasExplicitTracks = album?.flags ? album.flags.hasExplicit : false;
+  const hasAllLyrics = album?.flags?.hasLyrics ?? false;
+  const hasAllAudio = album?.flags?.hasAudio ?? false;
 
   const cover =
     (Array.isArray(album.images) && album.images[0]) ||
@@ -56,7 +57,7 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
     )}`;
 
   const genres = Array.isArray(album.genre_tags)
-    ? album.genre_tags.slice(0, 2)
+    ? album.genre_tags.slice(0, 3)
     : [];
 
   return (
@@ -109,7 +110,9 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
             </span>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="space-y-4">
+            {" "}
+            {/* Increased space-y from 2 to 3 */}
             <div className="flex flex-wrap gap-1">
               {genres.map((genre: string) => (
                 <Badge
@@ -121,9 +124,24 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
                 </Badge>
               ))}
             </div>
-
+            {(hasAllLyrics || hasAllAudio) && ( // Wrap in a div to apply spacing only if badges exist
+              <div className="flex flex-wrap gap-1">
+                {hasAllLyrics && (
+                  <Badge className="text-xs px-2 py-0.5 bg-black text-white border border-blue-500 hover:bg-blue-950">
+                    Lyrics
+                  </Badge>
+                )}
+                {hasAllAudio && (
+                  <Badge className="text-xs px-2 py-0.5 bg-black text-white border border-green-500 hover:bg-green-950">
+                    Audio
+                  </Badge>
+                )}
+              </div>
+            )}
             {album.approved === true && (
-              <div className="flex items-center gap-1 text-green-600">
+              <div className="flex items-center gap-1 text-green-600 pt-1">
+                {" "}
+                {/* Added pt-1 for spacing */}
                 <CheckCircle className="h-3 w-3" />
                 <span className="text-xs font-medium">Approved</span>
               </div>

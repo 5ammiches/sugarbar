@@ -1,42 +1,10 @@
 import { api } from "@/../convex/_generated/api";
 import { Doc, Id } from "@/../convex/_generated/dataModel";
+import { YouTubeSearchDialog } from "@/components/albums/youtube-search-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useQuery } from "@tanstack/react-query";
-import { convexQuery, useConvex } from "@convex-dev/react-query";
-import {
-  Check,
-  Edit3,
-  RefreshCw,
-  XCircle,
-  Calendar,
-  Music,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
-  User,
-  Disc,
-  Trash2,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -46,7 +14,40 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { normalizeAlbumTitle } from "@/../convex/utils/helpers";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { convexQuery, useConvex } from "@convex-dev/react-query";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { useQuery } from "@tanstack/react-query";
+import {
+  AlertCircle,
+  Calendar,
+  Check,
+  CheckCircle2,
+  Clock,
+  Disc,
+  Edit3,
+  Music,
+  RefreshCw,
+  Save,
+  Trash2,
+  X,
+  XCircle,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 type Props = {
   open: boolean;
@@ -97,6 +98,18 @@ export default function AlbumReviewDrawer({
       | undefined;
   };
 
+  const { data: previewTrackIds } = useQuery({
+    ...convexQuery(
+      api.audio.getPreviewTrackIdsForAlbum,
+      albumId ? { albumId } : "skip"
+    ),
+    enabled: !!albumId,
+  });
+
+  const previewTrackIdSet = useMemo(() => {
+    return new Set(previewTrackIds ?? []);
+  }, [previewTrackIds]);
+
   const [tracksState, setTracksState] = useState<TrackEditState>({});
   const [variantsState, setVariantsState] = useState<VariantEditState>({});
   const [savingTracks, setSavingTracks] = useState<Record<string, boolean>>({});
@@ -128,6 +141,19 @@ export default function AlbumReviewDrawer({
     open: false,
   });
 
+  // YouTube search dialog state
+  const [youTubeDialog, setYouTubeDialog] = useState<{
+    open: boolean;
+    trackId?: Id<"track">;
+    title: string;
+    artist: string;
+    expectedDuration?: number;
+  }>({
+    open: false,
+    title: "",
+    artist: "",
+  });
+
   useEffect(() => {
     if (!details) {
       setTracksState({});
@@ -139,6 +165,7 @@ export default function AlbumReviewDrawer({
       setCustomQueryDialog({ open: false, title: "", artist: "" });
       setDeletingVariants({});
       setDeleteConfirmDialog({ open: false });
+      setYouTubeDialog({ open: false, title: "", artist: "" });
       return;
     }
     const initTracks: TrackEditState = {};
@@ -273,12 +300,42 @@ export default function AlbumReviewDrawer({
     });
   };
 
+  const openYouTubeSearchDialog = (trackId: Id<"track">) => {
+    const trackEntry = details?.tracks.find((t) => t.track._id === trackId);
+    const track = trackEntry?.track;
+    if (!track) return;
+
+    const primaryArtist = details?.primaryArtist;
+    setYouTubeDialog({
+      open: true,
+      trackId,
+      title: track.title ?? "",
+      artist: primaryArtist?.name ?? "",
+      expectedDuration: track.duration_ms
+        ? Math.round((track.duration_ms ?? 0) / 1000)
+        : undefined,
+    });
+  };
+
   const handleCustomRetry = async () => {
     const { trackId, title, artist } = customQueryDialog;
     if (!trackId || !title.trim() || !artist.trim()) return;
 
     setCustomQueryDialog({ open: false, title: "", artist: "" });
     await retryLyricsWithCustomQuery(trackId, title.trim(), artist.trim());
+  };
+
+  const handleYouTubeDownloadSuccess = async () => {
+    // Close dialog and attempt to refresh album details to pick up new audio
+    setYouTubeDialog((prev) => ({ ...prev, open: false }));
+    if (!albumId) return;
+    try {
+      // Trigger a background refresh - React Query should update when DB changes,
+      // but fetch here to encourage fresh data.
+      await convex.query(api.db.getAlbumDetails, { albumId });
+    } catch (e) {
+      console.error("Failed to refresh album details after audio download", e);
+    }
   };
 
   const openDeleteConfirmDialog = (
@@ -647,46 +704,71 @@ export default function AlbumReviewDrawer({
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="destructive"
-                      onClick={handleReject}
-                      disabled={
-                        status === "queued" ||
-                        status === "in_progress" ||
-                        status === "rejected" ||
-                        status === "canceled" ||
-                        status === "failed"
-                      }
-                      className="h-10"
-                    >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Reject
-                    </Button>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          onClick={handleReject}
+                          disabled={
+                            status === "queued" ||
+                            status === "in_progress" ||
+                            status === "rejected" ||
+                            status === "canceled" ||
+                            status === "failed"
+                          }
+                          size="icon"
+                          aria-label="Reject"
+                          className="h-10 w-10"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Reject</p>
+                      </TooltipContent>
+                    </Tooltip>
 
-                    <Button
-                      variant="default"
-                      onClick={handleApprove}
-                      disabled={
-                        status === "queued" ||
-                        status === "in_progress" ||
-                        status === "approved" ||
-                        status === "canceled" ||
-                        status === "failed"
-                      }
-                      className="h-10 bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      <Check className="h-4 w-4 mr-2" />
-                      Approve
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="default"
+                          onClick={handleApprove}
+                          disabled={
+                            status === "queued" ||
+                            status === "in_progress" ||
+                            status === "approved" ||
+                            status === "canceled" ||
+                            status === "failed"
+                          }
+                          size="icon"
+                          aria-label="Approve"
+                          className="h-10 w-10 bg-emerald-600 hover:bg-emerald-700"
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Approve</p>
+                      </TooltipContent>
+                    </Tooltip>
 
-                    <Button
-                      variant="ghost"
-                      onClick={onClose}
-                      className="h-10 ml-auto"
-                    >
-                      Close
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          onClick={onClose}
+                          size="icon"
+                          aria-label="Close"
+                          className="h-10 w-10 md:ml-auto"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Close</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
               </SheetHeader>
@@ -741,6 +823,22 @@ export default function AlbumReviewDrawer({
                                     placeholder="Track title"
                                   />
                                   <div className="flex items-center gap-2 mt-1">
+                                    {previewTrackIdSet.has(t._id) && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-xs"
+                                      >
+                                        Audio
+                                      </Badge>
+                                    )}
+                                    {variants.length > 0 && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-xs"
+                                      >
+                                        Lyrics
+                                      </Badge>
+                                    )}
                                     {t.primary_artist_id && (
                                       <Badge
                                         variant="outline"
@@ -773,16 +871,6 @@ export default function AlbumReviewDrawer({
                                           </Badge>
                                         );
                                       }
-                                      if (ls === "fetched") {
-                                        return (
-                                          <Badge
-                                            variant="default"
-                                            className="text-xs"
-                                          >
-                                            Lyrics fetched
-                                          </Badge>
-                                        );
-                                      }
                                       return needsAttention ? (
                                         <Badge
                                           variant="destructive"
@@ -796,45 +884,104 @@ export default function AlbumReviewDrawer({
                                 </div>
                               </div>
 
+                              {/* Responsive action buttons: compact and responsive */}
                               <div className="flex items-center gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => retryLyrics(t._id)}
-                                  disabled={!!retrying[t._id]}
-                                >
-                                  {retrying[t._id] ? (
-                                    <>
-                                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                                      Retrying...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <RefreshCw className="h-4 w-4 mr-2" />
-                                      Retry Lyrics
-                                    </>
-                                  )}
-                                </Button>
+                                {/* Retry */}
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="outline"
+                                      onClick={() => retryLyrics(t._id)}
+                                      disabled={!!retrying[t._id]}
+                                      aria-label="Retry Lyrics"
+                                      className="h-8 w-8"
+                                    >
+                                      {retrying[t._id] ? (
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <RefreshCw className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Retry Lyrics</p>
+                                  </TooltipContent>
+                                </Tooltip>
 
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={() => openCustomQueryDialog(t._id)}
-                                  disabled={!!retrying[t._id]}
-                                >
-                                  <Edit3 className="h-4 w-4 mr-2" />
-                                  Custom Query
-                                </Button>
+                                {/* Custom query */}
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="secondary"
+                                      onClick={() =>
+                                        openCustomQueryDialog(t._id)
+                                      }
+                                      disabled={!!retrying[t._id]}
+                                      aria-label="Custom Lyrics Query"
+                                      className="h-8 w-8"
+                                    >
+                                      <Edit3 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Custom Lyrics Query</p>
+                                  </TooltipContent>
+                                </Tooltip>
 
-                                <Button
-                                  size="sm"
-                                  variant="default"
-                                  onClick={() => saveTrack(t._id)}
-                                  disabled={saving}
-                                >
-                                  <Edit3 className="h-4 w-4 mr-2" />
-                                  {saving ? "Saving..." : "Save"}
-                                </Button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="outline"
+                                      onClick={() =>
+                                        openYouTubeSearchDialog(t._id)
+                                      }
+                                      aria-label="Get Audio"
+                                      className="h-8 w-8"
+                                    >
+                                      <Music className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Get Audio</p>
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                {/* Save — show only when there are changes */}
+                                {(() => {
+                                  const hasTrackPatch = hasKeys(trackPatch);
+                                  const hasVariantEdits = variants.some((v) =>
+                                    hasKeys(variantsState[v._id])
+                                  );
+                                  const showSave =
+                                    hasTrackPatch || hasVariantEdits;
+                                  return showSave ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          key={`${t._id}-save`}
+                                          size="icon"
+                                          variant="default"
+                                          onClick={() => saveTrack(t._id)}
+                                          disabled={saving}
+                                          aria-label="Save"
+                                          className="h-8 w-8"
+                                        >
+                                          {saving ? (
+                                            <RefreshCw className="h-4 w-4 animate-spin" />
+                                          ) : (
+                                            <Save className="h-4 w-4" />
+                                          )}
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Save</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : null;
+                                })()}
                               </div>
                             </div>
 
@@ -949,6 +1096,14 @@ export default function AlbumReviewDrawer({
                                           disabled={
                                             !!deletingVariants[variants[0]._id]
                                           }
+                                          title={`Delete variant from ${
+                                            variants[0].source ??
+                                            "unknown source"
+                                          }`}
+                                          aria-label={`Delete variant from ${
+                                            variants[0].source ??
+                                            "unknown source"
+                                          }`}
                                           className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                         >
                                           {deletingVariants[variants[0]._id] ? (
@@ -1052,6 +1207,14 @@ export default function AlbumReviewDrawer({
                                               disabled={
                                                 !!deletingVariants[variant._id]
                                               }
+                                              title={`Delete variant from ${
+                                                variant.source ??
+                                                "unknown source"
+                                              }`}
+                                              aria-label={`Delete variant from ${
+                                                variant.source ??
+                                                "unknown source"
+                                              }`}
                                               className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                             >
                                               {deletingVariants[variant._id] ? (
@@ -1192,13 +1355,26 @@ export default function AlbumReviewDrawer({
                 !customQueryDialog.title.trim() ||
                 !customQueryDialog.artist.trim()
               }
+              title="Retry with Custom Query"
+              aria-label="Retry with Custom Query"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
-              Retry with Custom Query
+              <span>Retry with Custom Query</span>
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* YouTube Search / Audio Dialog */}
+      <YouTubeSearchDialog
+        open={youTubeDialog.open}
+        onClose={() => setYouTubeDialog((prev) => ({ ...prev, open: false }))}
+        trackId={youTubeDialog.trackId}
+        initialTitle={youTubeDialog.title}
+        initialArtist={youTubeDialog.artist}
+        expectedDuration={youTubeDialog.expectedDuration}
+        onDownloadSuccess={handleYouTubeDownloadSuccess}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog
@@ -1225,7 +1401,12 @@ export default function AlbumReviewDrawer({
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteVariant}>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteVariant}
+              title="Delete Variant"
+              aria-label="Delete Variant"
+            >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete Variant
             </Button>

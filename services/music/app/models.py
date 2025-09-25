@@ -1,7 +1,8 @@
 from enum import Enum
-from typing import Optional, List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
+
 
 class LyricSource(str, Enum):
     genius = "genius"
@@ -39,7 +40,7 @@ class SearchResponse(BaseModel):
 
 class PreviewRequest(BaseModel):
     trackId: str
-    candidateUrls: List[str]
+    candidates: List[SearchResultItem]
     previewStartSec: float = 30.0
     previewLenSec: float = Field(60, ge=5, le=90)
     bitrateKbps: int = 160
