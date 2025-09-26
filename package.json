@@ -16,6 +16,7 @@
   "author": "",
   "dependencies": {
     "@clerk/tanstack-react-start": "^0.18.3",
+    "@convex-dev/agent": "^0.2.10",
     "@convex-dev/react-query": "0.0.0-alpha.11",
     "@convex-dev/workflow": "^0.2.6",
     "@convex-dev/workpool": "^0.2.18",
