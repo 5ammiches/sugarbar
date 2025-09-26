@@ -4,13 +4,18 @@ import { ConvexProvider } from "@/components/providers/ConvexProvider";
 import { DefaultCatchBoundary } from "@/components/providers/DefaultCatchBoundary";
 import { NotFound } from "@/components/providers/NotFound";
 import { Toaster } from "@/components/ui/sonner";
+import "@/styles/globals.css";
 import { getAuth } from "@clerk/tanstack-react-start/server";
-import { Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
+import {
+  createRootRoute,
+  HeadContent,
+  Outlet,
+  Scripts,
+} from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { createServerFn } from "@tanstack/react-start";
 import { getWebRequest } from "@tanstack/react-start/server";
 import * as React from "react";
-import "../../app/globals.css";
 
 const fetchClerkAuth = createServerFn({ method: "GET" }).handler(async () => {
   const { userId } = await getAuth(getWebRequest());
@@ -84,7 +89,9 @@ export const Route = createRootRoute({
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html className="dark">
-      <head></head>
+      <head>
+        <HeadContent />
+      </head>
       <body>
         {children}
         <Scripts />

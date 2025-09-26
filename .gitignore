@@ -19,3 +19,4 @@ TODO.md
 .nitro/
 .ropeproject/
 TODO.md
+routeTree.gen.ts
