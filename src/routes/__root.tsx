@@ -4,7 +4,7 @@ import { DefaultCatchBoundary } from "@/components/providers/DefaultCatchBoundar
 import { NotFound } from "@/components/providers/NotFound";
 import { Toaster } from "@/components/ui/sonner";
 import "@/styles/globals.css";
-import { getAuth } from "@clerk/tanstack-react-start/server";
+// import { getAuth } from "@clerk/tanstack-react-start/server";
 import {
   createRootRoute,
   HeadContent,
@@ -12,17 +12,15 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { createServerFn } from "@tanstack/react-start";
-import { getWebRequest } from "@tanstack/react-start/server";
 import * as React from "react";
 
-const fetchClerkAuth = createServerFn({ method: "GET" }).handler(async () => {
-  const { userId } = await getAuth(getWebRequest());
+// const fetchClerkAuth = createServerFn({ method: "GET" }).handler(async () => {
+//   const { userId } = await getAuth(getWebRequest());
 
-  return {
-    userId,
-  };
-});
+//   return {
+//     userId,
+//   };
+// });
 
 export const Route = createRootRoute({
   // beforeLoad: async () => {
