@@ -1,5 +1,4 @@
 /// <reference types="vite/client" />
-import { ClerkAuthProvider } from "@/components/auth/clerk-provider";
 import { ConvexProvider } from "@/components/providers/ConvexProvider";
 import { DefaultCatchBoundary } from "@/components/providers/DefaultCatchBoundary";
 import { NotFound } from "@/components/providers/NotFound";
@@ -74,15 +73,15 @@ export const Route = createRootRoute({
   },
   notFoundComponent: () => <NotFound />,
   component: () => (
-    <ClerkAuthProvider>
-      <ConvexProvider>
-        <RootDocument>
-          <Outlet />
-          <TanStackRouterDevtools position="bottom-right" />
-          <Toaster richColors={true} position="top-center" />
-        </RootDocument>
-      </ConvexProvider>
-    </ClerkAuthProvider>
+    // <ClerkAuthProvider>
+    <ConvexProvider>
+      <RootDocument>
+        <Outlet />
+        <TanStackRouterDevtools position="bottom-right" />
+        <Toaster richColors={true} position="top-center" />
+      </RootDocument>
+    </ConvexProvider>
+    // </ClerkAuthProvider>
   ),
 });
 
