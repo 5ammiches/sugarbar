@@ -6,6 +6,5 @@
     "api/index.py": {
       "excludeFiles": "**"
     }
-  },
-  "excludeFiles": ["api/app/**", "api/run_server.py"]
+  }
 }
