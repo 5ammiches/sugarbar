@@ -25,13 +25,13 @@ const fetchClerkAuth = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const Route = createRootRoute({
-  beforeLoad: async () => {
-    const { userId } = await fetchClerkAuth();
+  // beforeLoad: async () => {
+  //   const { userId } = await fetchClerkAuth();
 
-    return {
-      userId,
-    };
-  },
+  //   return {
+  //     userId,
+  //   };
+  // },
   head: () => ({
     meta: [
       {
