@@ -10,8 +10,9 @@ from crawl4ai import (
     PruningContentFilter,
 )
 
-from app.base import LyricsBaseProvider
-from app.logger import NoResultsError, ProviderError  # <-- use domain errors
+from utils.logger import NoResultsError, ProviderError  # <-- use domain errors
+
+from .base import LyricsBaseProvider
 
 
 class Genius(LyricsBaseProvider):

@@ -12,8 +12,9 @@ from crawl4ai import (
     PruningContentFilter,
 )
 
-from app.base import LyricsBaseProvider
-from app.logger import NoResultsError, ProviderError
+from utils.logger import NoResultsError, ProviderError
+
+from .base import LyricsBaseProvider
 
 
 # TODO maybe refactor with an initialized AcynWebCrawler since it is used in two methods here

@@ -1,25 +1,24 @@
 import json
-import os
 import re
 import shutil
 import subprocess
 import urllib.parse
-from typing import Any, Dict, Final, List, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 from dotenv import load_dotenv
 
-from app.logger import NoResultsError, ProviderError
+from utils.logger import NoResultsError, ProviderError
 
 load_dotenv()
 FFMPEG = shutil.which("ffmpeg") or "/usr/bin/ffmpeg"
 
-raw_key: Optional[str] = os.getenv("YOUTUBE_API_KEY")
-if raw_key is None:
-    raise RuntimeError(
-        "YOUTUBE_API_KEY is missing. Put it in your environment or a .env file."
-    )
-API_KEY:  Final[str] = raw_key
+# raw_key: Optional[str] = os.getenv("YOUTUBE_API_KEY")
+# if raw_key is None:
+#     raise RuntimeError(
+#         "YOUTUBE_API_KEY is missing. Put it in your environment or a .env file."
+#     )
+# API_KEY:  Final[str] = raw_key
 
 
 class YoutubeScraper:

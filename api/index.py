@@ -1,9 +1,12 @@
-from fastapi import FastAPI
 from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.config import get_settings
-from app.routers import lyrics, youtube
-from app.logger import  setup_logging_and_handlers
+
+from routers import lyrics, youtube
+from utils.config import get_settings
+from utils.logger import setup_logging_and_handlers
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
