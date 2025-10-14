@@ -1,7 +1,7 @@
+import { hashLyrics } from "@/shared/helpers";
+import { LyricResponse } from "@/shared/typings";
 import { Id } from "../_generated/dataModel";
 import { MutationCtx } from "../_generated/server";
-import { LyricResponse } from "../utils/typings";
-import { hashLyrics } from "../utils/helpers";
 
 export async function upsertLyricVariant(
   ctx: MutationCtx,

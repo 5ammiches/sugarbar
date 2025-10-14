@@ -1,5 +1,8 @@
 import re
 import unicodedata
+from abc import ABC, abstractmethod
+from typing import List, Optional, Protocol, Tuple, runtime_checkable
+
 from crawl4ai import (
     AsyncWebCrawler,
     CacheMode,
@@ -7,9 +10,6 @@ from crawl4ai import (
     DefaultMarkdownGenerator,
     PruningContentFilter,
 )
-from abc import ABC, abstractmethod
-from typing import Optional, Protocol, Tuple, runtime_checkable, List
-
 from unidecode import unidecode
 
 
@@ -17,20 +17,6 @@ from unidecode import unidecode
 class AsyncClosable(Protocol):
     async def aclose(self):
         return None
-
-# class AudioBaseProvider(ABC):
-#     @abstractmethod
-#     async def search(self, title: str, artist: str, duration_sec: int) :
-#         raise NotImplementedError
-
-#     @abstractmethod
-#     async def download_yt_audio(self, video_url: str):
-#         raise NotImplementedError
-
-#     @abstractmethod
-#     async def trim_audio_preview(self, url: str):
-#         raise NotImplementedError
-
 
 class LyricsBaseProvider(ABC):
     async def aclose(self) -> None:

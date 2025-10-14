@@ -1,5 +1,5 @@
+import { LYRIC_SOURCES } from "@/shared/constants";
 import { z } from "zod";
-import { LYRIC_SOURCES } from "@/lib/constants";
 
 /**
  * Reusable atoms
@@ -75,6 +75,29 @@ export const LyricResponseSchema = z.object({
 });
 
 /**
+ * Audio (Youtube provider response)
+ */
+export const YTSearchResultItem = z.object({
+  videoId: z.string(),
+  title: z.string(),
+  durationSec: z.number(),
+  url: z.string(),
+  category: z.string(),
+});
+
+export const YTSearchResponseSchema = z.object({
+  items: z.array(YTSearchResultItem),
+});
+
+export const YTPreviewResponseSchema = z.object({
+  sourceUrl: z.url().optional(),
+  contentType: z.string().default("audio/mp4"),
+  durationSec: z.number().int().positive(),
+  bitrateKbps: z.number().int().positive(),
+  codec: z.string().default("aac"),
+});
+
+/**
  * Types
  */
 export type Metadata = z.infer<typeof MetadataSchema>;
@@ -84,3 +107,10 @@ export type Album = z.infer<typeof AlbumSchema>;
 export type EmbeddedAlbum = z.infer<typeof EmbeddedAlbumSchema>;
 export type LyricResponse = z.infer<typeof LyricResponseSchema>;
 export type LyricSource = z.infer<typeof LyricSource>;
+export type YTSearchResultItem = z.infer<typeof YTSearchResultItem>;
+export type YTSearchResponse = z.infer<typeof YTSearchResponseSchema>;
+export type YTPreviewResponse = z.infer<typeof YTPreviewResponseSchema>;
+export type PreviewDownload = {
+  blob: Blob;
+  meta: YTPreviewResponse;
+};

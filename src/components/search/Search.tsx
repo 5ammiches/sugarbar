@@ -1,12 +1,21 @@
 import { api } from "@/../convex/_generated/api";
-import { Album } from "@/../convex/utils/typings";
-import { Route as SearchRoute, type SearchParams } from "@/routes/_dashboard/index";
+import {
+  Route as SearchRoute,
+  type SearchParams,
+} from "@/routes/_dashboard/index";
+import { Album } from "@/shared/typings";
 import { useConvex } from "@convex-dev/react-query";
 import React from "react";
 import SearchResultsTable, { type SearchRow } from "./SearchResultsTable";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -18,7 +27,6 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Loader2, Plus, Search as SearchIcon } from "lucide-react";
-import { convexQuery } from "@convex-dev/react-query";
 
 const searchTypes = [
   { value: "album", label: "Albums" },
@@ -62,7 +70,9 @@ export default function Search() {
 
   const mapAlbumsToRows = React.useCallback((albums: Album[]): SearchRow[] => {
     return (albums ?? []).map((al, idx) => {
-      const spotifyId = al?.metadata?.provider_ids?.spotify as string | undefined;
+      const spotifyId = al?.metadata?.provider_ids?.spotify as
+        | string
+        | undefined;
       const primaryArtist = al?.primary_artist?.name ?? "Unknown Artist";
       const title = al?.title ?? "Unknown";
       const releaseDate = al?.release_date ?? "";
@@ -109,7 +119,9 @@ export default function Search() {
     (row.spotifyId && String(row.spotifyId)) || String(row.id);
 
   const handleAddSelectedAlbums = async () => {
-    const albumsToAdd = searchResults.filter((album) => selectedAlbums.includes(album.id));
+    const albumsToAdd = searchResults.filter((album) =>
+      selectedAlbums.includes(album.id)
+    );
     if (albumsToAdd.length === 0) return;
 
     setAdding((prev) => {
@@ -160,10 +172,12 @@ export default function Search() {
         <div className="space-y-8">
           {/* Header */}
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight text-balance">Search & Discover</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-balance">
+              Search & Discover
+            </h1>
             <p className="text-muted-foreground">
-              Search Spotify's catalog and add albums to your processing pipeline (
-              {searchResults.length} results)
+              Search Spotify's catalog and add albums to your processing
+              pipeline ({searchResults.length} results)
             </p>
           </div>
 
@@ -173,7 +187,9 @@ export default function Search() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-xl">Search Spotify</CardTitle>
-                  <CardDescription>Find albums, artists, tracks, and playlists</CardDescription>
+                  <CardDescription>
+                    Find albums, artists, tracks, and playlists
+                  </CardDescription>
                 </div>
                 <SearchIcon className="h-5 w-5 text-muted-foreground" />
               </div>
@@ -197,7 +213,10 @@ export default function Search() {
                     </SelectTriggerComponent>
                     <SelectContentComponent>
                       {searchTypes.map((type) => (
-                        <SelectItemComponent key={type.value} value={type.value}>
+                        <SelectItemComponent
+                          key={type.value}
+                          value={type.value}
+                        >
                           {type.label}
                         </SelectItemComponent>
                       ))}

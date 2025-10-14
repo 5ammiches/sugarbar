@@ -1,9 +1,9 @@
 import { logger } from "@/lib/utils";
+import { normalizeText, pickUrl, toArray } from "@/shared/helpers";
+import { Album, Artist, EmbeddedAlbum, Track } from "@/shared/typings";
 import { SpotifyApi } from "@spotify/web-api-ts-sdk";
 import { z } from "zod";
-import { normalizeText, pickUrl, toArray } from "../../utils/helpers";
-import { Album, Artist, EmbeddedAlbum, Track } from "../../utils/typings";
-import { MapperFn, MusicProvider } from "../base";
+import { MusicProvider } from "../base";
 import {
   SpotifyAlbumUnified,
   SpotifyAlbumUnifiedSchema,
@@ -51,7 +51,6 @@ export class SpotifyProvider implements MusicProvider {
       },
       genre_tags: t.genres,
       lyrics_fetched_status: "not_fetched",
-      // processed_status: false,
 
       album,
       artists,
@@ -86,7 +85,6 @@ export class SpotifyProvider implements MusicProvider {
         provider_ids: { spotify: ar.id },
         urls,
       },
-      // processed_status: false,
     };
   };
 

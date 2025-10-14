@@ -1,3 +1,4 @@
+import { stripFeaturingCredits } from "@/shared/helpers";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
@@ -8,7 +9,6 @@ import {
   query,
 } from "./_generated/server";
 import { PythonMusicProvider } from "./providers/audio_lyrics/pythonMusic";
-import { stripFeaturingCredits } from "./utils/helpers";
 
 const AudioMeta = v.object({
   contentType: v.string(),
@@ -294,7 +294,6 @@ export const getPreviewTrackIdsForAlbum = query({
 });
 
 // Public action for direct audio download from YouTube URL
-// This function downloads audio from a specific YouTube URL without performing a search
 export const fetchAudioPreviewFromUrl = action({
   args: {
     trackId: v.id("track"),

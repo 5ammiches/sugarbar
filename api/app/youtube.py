@@ -6,11 +6,8 @@ import subprocess
 import urllib.parse
 from typing import Any, Dict, Final, List, Optional
 
-import isodate
 import requests
 from dotenv import load_dotenv
-from pyyoutube import Client
-from yt_dlp import YoutubeDL
 
 from app.logger import NoResultsError, ProviderError
 
@@ -180,7 +177,6 @@ class YoutubeScraper:
                 raise NoResultsError(
                     f"No search results found for: {search_query}")
 
-            # Filter by duration matching (similar to Go code)
             allowed_duration_start = duration_sec - self.duration_match_threshold
             allowed_duration_end = duration_sec + self.duration_match_threshold
 
@@ -240,167 +236,167 @@ class YoutubeScraper:
         subprocess.run(cmd, check=True)
 
 
-class Youtube:
-    def __init__(self, api_key: str):
-        if not api_key:
-            raise ValueError("Youtube API Key is required")
+# class Youtube:
+#     def __init__(self, api_key: str):
+#         if not api_key:
+#             raise ValueError("Youtube API Key is required")
 
-        self.api_key = api_key
-        self.client = Client(api_key=self.api_key)
+#         self.api_key = api_key
+#         self.client = Client(api_key=self.api_key)
 
-    def _iso_to_seconds(self, iso: str):
-        return int(isodate.parse_duration(iso).total_seconds())
+#     def _iso_to_seconds(self, iso: str):
+#         return int(isodate.parse_duration(iso).total_seconds())
 
-    async def search(self, title: str, artist: str, duration_sec: int):
-        try:
-            resp = self.client.search.list(
-                parts=["snippet"],
-                max_results=25,
-                q=f"{title} {artist}",
-                event_type="none",
-                return_json=False,
-                type="video",
-                # video_category_id="10",
-                order="relevance",
-                safe_search="none",
-            )
+#     async def search(self, title: str, artist: str, duration_sec: int):
+#         try:
+#             resp = self.client.search.list(
+#                 parts=["snippet"],
+#                 max_results=25,
+#                 q=f"{title} {artist}",
+#                 event_type="none",
+#                 return_json=False,
+#                 type="video",
+#                 # video_category_id="10",
+#                 order="relevance",
+#                 safe_search="none",
+#             )
 
-            if not resp or not resp.items or isinstance(resp, dict):
-                raise NoResultsError(
-                    f"Youtube client: no results found for query: {
-                        title} - {artist}"
-                )
+#             if not resp or not resp.items or isinstance(resp, dict):
+#                 raise NoResultsError(
+#                     f"Youtube client: no results found for query: {
+#                         title} - {artist}"
+#                 )
 
-            video_ids = [
-                item.id.videoId
-                for item in resp.items
-                if item.id and item.id.kind == "youtube#video" and item.id.videoId
-            ]
+#             video_ids = [
+#                 item.id.videoId
+#                 for item in resp.items
+#                 if item.id and item.id.kind == "youtube#video" and item.id.videoId
+#             ]
 
-            videos = self.client.videos.list(video_id=",".join(video_ids))
+#             videos = self.client.videos.list(video_id=",".join(video_ids))
 
-            if not videos or not videos.items or isinstance(videos, dict):
-                raise ProviderError(
-                    f"Youtube client: no results found for query: {
-                        title} - {artist}"
-                )
+#             if not videos or not videos.items or isinstance(videos, dict):
+#                 raise ProviderError(
+#                     f"Youtube client: no results found for query: {
+#                         title} - {artist}"
+#                 )
 
-            tol = 5
-            low = duration_sec - tol
-            high = duration_sec + tol
+#             tol = 5
+#             low = duration_sec - tol
+#             high = duration_sec + tol
 
-            res = []
-            for v in videos.items:
-                if (
-                    not v.contentDetails
-                    or not v.contentDetails.duration
-                    or not v.snippet
-                ):
-                    continue
-                track_dur = self._iso_to_seconds(v.contentDetails.duration)
-                if low <= track_dur <= high:
-                    res.append(
-                        {
-                            "videoId": v.id,
-                            "title": v.snippet.title,
-                            "durationSec": track_dur,
-                            "url": f"https://www.youtube.com/watch?v={v.id}",
-                            "category": v.snippet.categoryId,
-                        }
-                    )
-                if len(res) >= 5:
-                    break
+#             res = []
+#             for v in videos.items:
+#                 if (
+#                     not v.contentDetails
+#                     or not v.contentDetails.duration
+#                     or not v.snippet
+#                 ):
+#                     continue
+#                 track_dur = self._iso_to_seconds(v.contentDetails.duration)
+#                 if low <= track_dur <= high:
+#                     res.append(
+#                         {
+#                             "videoId": v.id,
+#                             "title": v.snippet.title,
+#                             "durationSec": track_dur,
+#                             "url": f"https://www.youtube.com/watch?v={v.id}",
+#                             "category": v.snippet.categoryId,
+#                         }
+#                     )
+#                 if len(res) >= 5:
+#                     break
 
-            if not res:
-                raise ProviderError(
-                    f"Youtube client: no results found for query: {
-                        title} - {artist}"
-                )
+#             if not res:
+#                 raise ProviderError(
+#                     f"Youtube client: no results found for query: {
+#                         title} - {artist}"
+#                 )
 
-            return res
+#             return res
 
-        except Exception as e:
-            raise ProviderError(f"Youtube client error: {str(e)}") from e
+#         except Exception as e:
+#             raise ProviderError(f"Youtube client error: {str(e)}") from e
 
-    def dl_best_audio(self, video_url: str, tmp_dir: str):
-        out_tmpl = os.path.join(tmp_dir, "%(id)s.%(ext)s")
-        ydl_opts = {
-            "outtmpl": {"default": out_tmpl},
-            "format": "bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio/best[height<=480]/best",
-            "noplaylist": True,
-            "quiet": True,
-            "no_warnings": True,
-            "socket_timeout": 15,
-            "retries": 3,
-            "concurrent_fragment_downloads": 4,
-            "extract_flat": False,
-            "ignoreerrors": False,
-        }
-        try:
-            with YoutubeDL(ydl_opts) as ydl:  # type: ignore
-                rc = ydl.download([video_url])
-                if rc != 0:
-                    raise RuntimeError("yt-dlp failed")
-            files = [
-                f
-                for f in os.listdir(tmp_dir)
-                if not f.endswith(".part") and not f.endswith(".info.json")
-            ]
-            if not files:
-                raise RuntimeError("No file produced")
-            files.sort(key=lambda f: os.path.getmtime(
-                os.path.join(tmp_dir, f)))
-            return os.path.join(tmp_dir, files[-1])
+#     def dl_best_audio(self, video_url: str, tmp_dir: str):
+#         out_tmpl = os.path.join(tmp_dir, "%(id)s.%(ext)s")
+#         ydl_opts = {
+#             "outtmpl": {"default": out_tmpl},
+#             "format": "bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio/best[height<=480]/best",
+#             "noplaylist": True,
+#             "quiet": True,
+#             "no_warnings": True,
+#             "socket_timeout": 15,
+#             "retries": 3,
+#             "concurrent_fragment_downloads": 4,
+#             "extract_flat": False,
+#             "ignoreerrors": False,
+#         }
+#         try:
+#             with YoutubeDL(ydl_opts) as ydl:  # type: ignore
+#                 rc = ydl.download([video_url])
+#                 if rc != 0:
+#                     raise RuntimeError("yt-dlp failed")
+#             files = [
+#                 f
+#                 for f in os.listdir(tmp_dir)
+#                 if not f.endswith(".part") and not f.endswith(".info.json")
+#             ]
+#             if not files:
+#                 raise RuntimeError("No file produced")
+#             files.sort(key=lambda f: os.path.getmtime(
+#                 os.path.join(tmp_dir, f)))
+#             return os.path.join(tmp_dir, files[-1])
 
-        except Exception as e:
-            # Try with a more permissive format as fallback
-            try:
-                fallback_opts = ydl_opts.copy()
-                fallback_opts["format"] = "worst/best"
-                with YoutubeDL(fallback_opts) as ydl:  # type: ignore
-                    rc = ydl.download([video_url])
-                    if rc != 0:
-                        raise RuntimeError("yt-dlp fallback failed")
-                files = [
-                    f
-                    for f in os.listdir(tmp_dir)
-                    if not f.endswith(".part") and not f.endswith(".info.json")
-                ]
-                if not files:
-                    raise RuntimeError("No file produced in fallback")
-                files.sort(key=lambda f: os.path.getmtime(
-                    os.path.join(tmp_dir, f)))
-                return os.path.join(tmp_dir, files[-1])
-            except Exception as fallback_error:
-                raise ProviderError(
-                    f"Youtube client error (both primary and fallback failed): Primary: {
-                        str(e)}, Fallback: {str(fallback_error)}"
-                ) from e
+#         except Exception as e:
+#             # Try with a more permissive format as fallback
+#             try:
+#                 fallback_opts = ydl_opts.copy()
+#                 fallback_opts["format"] = "worst/best"
+#                 with YoutubeDL(fallback_opts) as ydl:  # type: ignore
+#                     rc = ydl.download([video_url])
+#                     if rc != 0:
+#                         raise RuntimeError("yt-dlp fallback failed")
+#                 files = [
+#                     f
+#                     for f in os.listdir(tmp_dir)
+#                     if not f.endswith(".part") and not f.endswith(".info.json")
+#                 ]
+#                 if not files:
+#                     raise RuntimeError("No file produced in fallback")
+#                 files.sort(key=lambda f: os.path.getmtime(
+#                     os.path.join(tmp_dir, f)))
+#                 return os.path.join(tmp_dir, files[-1])
+#             except Exception as fallback_error:
+#                 raise ProviderError(
+#                     f"Youtube client error (both primary and fallback failed): Primary: {
+#                         str(e)}, Fallback: {str(fallback_error)}"
+#                 ) from e
 
-    def cut_to_m4a(
-        self, src: str, dst: str, start: float, dur: float, bitrate_kbps: int
-    ):
-        cmd = [
-            FFMPEG,
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-ss",
-            str(start),
-            "-t",
-            str(dur),
-            "-i",
-            src,
-            "-vn",
-            "-c:a",
-            "aac",
-            "-b:a",
-            f"{bitrate_kbps}k",
-            "-movflags",
-            "faststart",
-            dst,
-        ]
-        subprocess.run(cmd, check=True)
+#     def cut_to_m4a(
+#         self, src: str, dst: str, start: float, dur: float, bitrate_kbps: int
+#     ):
+#         cmd = [
+#             FFMPEG,
+#             "-hide_banner",
+#             "-loglevel",
+#             "error",
+#             "-ss",
+#             str(start),
+#             "-t",
+#             str(dur),
+#             "-i",
+#             src,
+#             "-vn",
+#             "-c:a",
+#             "aac",
+#             "-b:a",
+#             f"{bitrate_kbps}k",
+#             "-movflags",
+#             "faststart",
+#             dst,
+#         ]
+#         subprocess.run(cmd, check=True)
 
 
 # async def main():

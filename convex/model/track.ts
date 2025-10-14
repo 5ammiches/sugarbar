@@ -1,10 +1,10 @@
+import { normalizeText } from "@/shared/helpers";
+import { Album, Track } from "@/shared/typings";
 import { Doc, Id } from "../_generated/dataModel";
 import { MutationCtx } from "../_generated/server";
-import { Track, Album } from "../utils/typings";
-import * as Artist from "./artist";
 import * as AlbumModel from "./album";
+import * as Artist from "./artist";
 import * as Metadata from "./metadata";
-import { normalizeText } from "../utils/helpers";
 
 export function computeCanonicalKey(
   titleNormalized: string,

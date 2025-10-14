@@ -1,3 +1,10 @@
+import { hashLyrics, normalizeAlbumTitle } from "@/shared/helpers";
+import {
+  AlbumSchema,
+  ArtistSchema,
+  LyricResponseSchema,
+  TrackSchema,
+} from "@/shared/typings";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
@@ -13,13 +20,6 @@ import * as Lyric from "./model/lyric";
 import * as Track from "./model/track";
 import { computeCanonicalKey } from "./model/track";
 import { LyricsStatus } from "./schema";
-import { hashLyrics, normalizeAlbumTitle } from "./utils/helpers";
-import {
-  AlbumSchema,
-  ArtistSchema,
-  LyricResponseSchema,
-  TrackSchema,
-} from "./utils/typings";
 
 export const upsertAlbum = internalMutation({
   args: {
@@ -597,7 +597,7 @@ export const updateApprovedAlbum = mutation({
     }
 
     if ("title" in safePatch) {
-      const { normalizeAlbumTitle } = await import("./utils/helpers");
+      const { normalizeAlbumTitle } = await import("@/shared/helpers");
       const { base_title, edition_tag } = normalizeAlbumTitle(safePatch.title);
       safePatch.title_normalized = base_title;
       if (edition_tag && !("edition_tag" in safePatch)) {

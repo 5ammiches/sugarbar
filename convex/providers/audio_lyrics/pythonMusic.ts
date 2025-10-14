@@ -1,19 +1,18 @@
+import { logger } from "@/lib/utils";
 import {
+  LyricResponse,
+  LyricResponseSchema,
+  LyricSource,
   PreviewDownload,
   YTPreviewResponseSchema,
   YTSearchResponse,
   YTSearchResponseSchema,
   YTSearchResultItem,
-} from "@/lib/typings";
-import { logger } from "@/lib/utils";
+} from "@/shared/typings";
 import z from "zod";
-import {
-  LyricResponse,
-  LyricResponseSchema,
-  LyricSource,
-} from "../../utils/typings";
 import { AudioLyricProvider } from "../base";
 
+// TODO transfer the service calls to Convex http actions
 export class PythonMusicProvider implements AudioLyricProvider {
   private BASE_URL: string;
 
@@ -168,7 +167,6 @@ export class PythonMusicProvider implements AudioLyricProvider {
     previewStartSec?: number,
     previewLenSec?: number
   ): Promise<PreviewDownload | undefined> {
-    // Call the Python service preview-search
     const url = `${this.BASE_URL}/api/youtube/preview-scrape`;
 
     const body: Record<string, any> = {

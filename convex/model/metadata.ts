@@ -1,4 +1,4 @@
-import { Metadata } from "../utils/typings";
+import { Metadata } from "@/shared/typings";
 
 export function mergeStringMap(
   a?: Record<string, string>,
