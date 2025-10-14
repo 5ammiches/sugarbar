@@ -4,7 +4,8 @@
   "framework": "vite",
   "functions": {
     "api/index.py": {
-      "excludeFiles": "./api/app/**"
+      "excludeFiles": "**"
     }
-  }
+  },
+  "excludeFiles": ["api/app/**", "api/run_server.py"]
 }
