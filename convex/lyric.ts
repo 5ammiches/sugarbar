@@ -12,6 +12,7 @@ import { PythonMusicProvider } from "./providers/audio_lyrics/pythonMusic";
 // TODO make the REST calls here with Convex Http instead of having them in the pythonMusic.ts client
 function makeLyrics(endpoint?: string) {
   endpoint = endpoint ?? process.env.PYTHON_LYRICS_URL;
+  console.log(endpoint);
   return new PythonMusicProvider(endpoint);
 }
 
