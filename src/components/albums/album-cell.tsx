@@ -1,11 +1,11 @@
-import React from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
-  TooltipTrigger,
   TooltipContent,
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Check } from "lucide-react";
+import React, { JSX } from "react";
 
 interface AlbumCellProps {
   albumTitle?: string;

@@ -1,17 +1,16 @@
-import { Search, Music, Clock, Database, Sparkles } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Link, useRouterState } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { Clock, Database, Music, Search } from "lucide-react";
 
 const items = [
   {
@@ -49,7 +48,9 @@ export function AppSidebar() {
             <Music className="h-5 w-5 text-white" />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-lg font-semibold text-sidebar-foreground">Sugarbar</h1>
+            <h1 className="text-lg font-semibold text-sidebar-foreground">
+              Sugarbar
+            </h1>
             <p className="text-xs text-sidebar-foreground/60">Album Pipeline</p>
           </div>
         </div>
@@ -90,7 +91,9 @@ export function AppSidebar() {
                         <item.icon className="h-4 w-4" />
                       </div>
                       <div className="flex flex-col items-start">
-                        <span className="text-sm font-medium">{item.title}</span>
+                        <span className="text-sm font-medium">
+                          {item.title}
+                        </span>
                         <span className="text-xs text-sidebar-foreground/50 group-data-[active=true]:text-sidebar-foreground/70">
                           {item.description}
                         </span>
