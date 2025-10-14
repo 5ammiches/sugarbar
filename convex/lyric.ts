@@ -1,15 +1,15 @@
-import { LYRIC_SOURCES } from "@/lib/constants";
+import { LYRIC_SOURCES } from "@/shared/constants";
+import {
+  generateTitleVariantsForLyrics,
+  normalizeText,
+} from "@/shared/helpers";
+import { LyricSource } from "@/shared/typings";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { action, internalAction } from "./_generated/server";
 import { PythonMusicProvider } from "./providers/audio_lyrics/pythonMusic";
-import { generateTitleVariantsForLyrics, normalizeText } from "./utils/helpers";
-import { LyricSource } from "./utils/typings";
 
-/**
- * Small helper to build the external lyrics provider client.
- * The endpoint defaults to PYTHON_LYRICS_URL env var.
- */
+// TODO make the REST calls here with Convex Http instead of having them in the pythonMusic.ts client
 function makeLyrics(endpoint?: string) {
   endpoint = endpoint ?? process.env.PYTHON_LYRICS_URL;
   return new PythonMusicProvider(endpoint);

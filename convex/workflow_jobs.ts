@@ -198,7 +198,6 @@ export const patchJobContext = internalMutation({
 
 /**
  * Sync a single workflow's status and ensure a job row exists/updated.
- * This mirrors the prior behavior but avoids writing any typed album_id column.
  */
 export const syncJob = mutation({
   args: { workflowId: v.string() },

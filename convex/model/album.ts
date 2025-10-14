@@ -1,9 +1,9 @@
+import { normalizeAlbumTitle } from "@/shared/helpers";
+import { Album } from "@/shared/typings";
+import { Doc, Id } from "../_generated/dataModel";
 import { MutationCtx } from "../_generated/server";
-import { Id, Doc } from "../_generated/dataModel";
-import { Album } from "../utils/typings";
 import * as Artist from "./artist";
 import * as Metadata from "./metadata";
-import { normalizeAlbumTitle } from "../utils/helpers";
 
 type ResolveAlbumResult = {
   existing: Doc<"album"> | null;
@@ -139,7 +139,6 @@ export async function upsertAlbum(
     edition_tag: editionTag,
     metadata: incomingMetadata,
     images: album.imageUrls ?? [],
-    // processed_status: false,
   });
   return newId;
 }

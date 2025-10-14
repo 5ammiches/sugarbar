@@ -1,15 +1,13 @@
 import {
-  PreviewDownload,
-  YTSearchResponse,
-  YTSearchResultItem,
-} from "@/lib/typings";
-import {
   Album,
   Artist,
   LyricResponse,
   LyricSource,
+  PreviewDownload,
   Track,
-} from "../utils/typings";
+  YTSearchResponse,
+  YTSearchResultItem,
+} from "@/shared/typings";
 
 export type MapperFn<T> = (raw: Record<string, any>) => T | undefined;
 

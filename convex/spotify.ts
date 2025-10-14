@@ -1,7 +1,7 @@
-import { action, internalAction } from "./_generated/server";
+import { Album } from "@/shared/typings";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { Album } from "./utils/typings";
+import { action, internalAction } from "./_generated/server";
 import { SpotifyProvider } from "./providers/music/spotify";
 
 // TODO structure a way to get albums + tracks + artist + lyrics + metadata + genre_tags + audio

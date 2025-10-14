@@ -1,6 +1,6 @@
-import { mutation, query } from "./_generated/server";
+import { normalizeForCompare, slugify } from "@/shared/helpers";
 import { v } from "convex/values";
-import { normalizeForCompare, slugify } from "./utils/helpers";
+import { mutation, query } from "./_generated/server";
 
 export const searchGenres = query({
   args: { query: v.string() },

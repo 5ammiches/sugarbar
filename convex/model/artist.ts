@@ -1,7 +1,7 @@
-import { MutationCtx } from "../_generated/server";
+import { normalizeText } from "@/shared/helpers";
+import { Artist } from "@/shared/typings";
 import { Doc, Id } from "../_generated/dataModel";
-import { arraysEqualUnordered, normalizeText } from "../utils/helpers";
-import { Artist } from "../utils/typings";
+import { MutationCtx } from "../_generated/server";
 import { mergeMetadata } from "./metadata";
 
 type ResolveArtistResult = {

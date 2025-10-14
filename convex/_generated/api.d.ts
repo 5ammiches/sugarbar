@@ -11,7 +11,6 @@
 import type * as album_workflow from "../album_workflow.js";
 import type * as audio from "../audio.js";
 import type * as db from "../db.js";
-import type * as example from "../example.js";
 import type * as genre from "../genre.js";
 import type * as lyric from "../lyric.js";
 import type * as model_album from "../model/album.js";
@@ -24,8 +23,6 @@ import type * as providers_base from "../providers/base.js";
 import type * as providers_music_spotify from "../providers/music/spotify.js";
 import type * as providers_music_spotifySchemas from "../providers/music/spotifySchemas.js";
 import type * as spotify from "../spotify.js";
-import type * as utils_helpers from "../utils/helpers.js";
-import type * as utils_typings from "../utils/typings.js";
 import type * as workflow_jobs from "../workflow_jobs.js";
 
 import type {
@@ -46,7 +43,6 @@ declare const fullApi: ApiFromModules<{
   album_workflow: typeof album_workflow;
   audio: typeof audio;
   db: typeof db;
-  example: typeof example;
   genre: typeof genre;
   lyric: typeof lyric;
   "model/album": typeof model_album;
@@ -59,8 +55,6 @@ declare const fullApi: ApiFromModules<{
   "providers/music/spotify": typeof providers_music_spotify;
   "providers/music/spotifySchemas": typeof providers_music_spotifySchemas;
   spotify: typeof spotify;
-  "utils/helpers": typeof utils_helpers;
-  "utils/typings": typeof utils_typings;
   workflow_jobs: typeof workflow_jobs;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

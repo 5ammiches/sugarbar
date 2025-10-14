@@ -207,7 +207,7 @@ const ALIASES: Record<string, string> = {
   "post chorus": "post-chorus",
   postchorus: "post-chorus",
   refrains: "refrain",
-  "pre hook": "pre-chorus", // if you see this in the wild
+  "pre hook": "pre-chorus",
 };
 
 function canonicalizeLabel(raw: string): string {

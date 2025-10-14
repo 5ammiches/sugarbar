@@ -1,8 +1,8 @@
 import { vWorkflowId, WorkflowManager } from "@convex-dev/workflow";
-import { v } from "convex/values";
-import { components, internal, api } from "./_generated/api";
-import { action, internalMutation, mutation } from "./_generated/server";
 import { vResultValidator } from "@convex-dev/workpool";
+import { v } from "convex/values";
+import { components, internal } from "./_generated/api";
+import { action, internalMutation } from "./_generated/server";
 
 export const workflow = new WorkflowManager(components.workflow, {
   workpoolOptions: {
@@ -124,7 +124,6 @@ export const albumWorkflow = workflow.define({
           { retry: lyricRetry, name: "lyric.fetchLyrics" }
         );
 
-        // TODO fix here
         await step.runAction(
           audio.fetchTrackPreviewInternal,
           { trackId },
@@ -134,11 +133,6 @@ export const albumWorkflow = workflow.define({
         return trackId;
       })()
     );
-
-    const upsertedTrackIds = await Promise.all(trackPromises);
-
-    // Optionally return something typed; or keep Promise<void>.
-    // return { artists: upsertedArtistIds, tracks: upsertedTrackIds };
   },
 });
 
