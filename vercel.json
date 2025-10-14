@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npx convex deploy --cmd 'npm run build'",
+  "framework": "vite",
+  "functions": {
+    "api/index.py": {
+      "excludeFiles": "./api/app/**"
+    }
+  }
+}
