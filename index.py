@@ -1,11 +1,10 @@
 from contextlib import asynccontextmanager
 
+from backend.routers import lyrics, youtube
+from backend.utils.config import get_settings
+from backend.utils.logger import setup_logging_and_handlers
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from routers import lyrics, youtube
-from utils.config import get_settings
-from utils.logger import setup_logging_and_handlers
 
 
 @asynccontextmanager
