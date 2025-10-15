@@ -1,7 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npx convex deploy --cmd 'npm run build'",
-  "functions": {
-    "api/**": {}
-  }
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "api/index.py"
+    }
+  ]
 }
