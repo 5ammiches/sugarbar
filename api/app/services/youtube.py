@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 import requests
 from dotenv import load_dotenv
 
-from utils.logger import NoResultsError, ProviderError
+from app.utils.logger import NoResultsError, ProviderError
 
 load_dotenv()
 FFMPEG = shutil.which("ffmpeg") or "/usr/bin/ffmpeg"

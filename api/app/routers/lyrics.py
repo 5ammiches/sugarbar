@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException
 
-from models.models import LyricRequest, LyricResponse, LyricSource
-from services.genius import Genius
-from services.musixmatch import Musixmatch
-from utils.config import get_settings
-from utils.logger import NoResultsError, ProviderError, logger
+from app.models.models import LyricRequest, LyricResponse, LyricSource
+from app.services.genius import Genius
+from app.services.musixmatch import Musixmatch
+from app.utils.config import get_settings
+from app.utils.logger import NoResultsError, ProviderError, logger
 
 router = APIRouter()
 

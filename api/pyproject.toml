@@ -27,6 +27,3 @@ indent-style = "space"          # "space" | "tab"
 line-ending = "auto"            # "auto" | "lf" | "crlf" | "cr"
 docstring-code-format = true    # format code blocks inside docstrings
 preview = false
-
-[tool.uv]
-python = "3.12"

@@ -7,14 +7,14 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from yt_dlp import YoutubeDL
 
-from models.models import (
+from app.models.models import (
     PreviewRequest,
     SearchRequest,
     SearchResponse,
     SearchResultItem,
 )
-from services.youtube import YoutubeScraper
-from utils.logger import NoResultsError, ProviderError, logger
+from app.services.youtube import YoutubeScraper
+from app.utils.logger import NoResultsError, ProviderError, logger
 
 router = APIRouter()
 
