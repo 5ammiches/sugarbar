@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim-trixie
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -22,8 +22,10 @@ COPY pyproject.toml uv.lock /app/
 COPY . /app/
 
 RUN uv sync --frozen --no-cache
+RUN chmod +x /app/scripts/start.sh
 
 RUN /app/.venv/bin/python -m playwright install chromium
 
 EXPOSE 8000
+ENTRYPOINT [ "/app/scripts/start.sh" ]
 CMD ["uv", "run", "fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "8000"]
