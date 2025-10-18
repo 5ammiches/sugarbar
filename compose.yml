@@ -1,8 +1,9 @@
 services:
   api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
+    # build:
+    #   context: ./api
+    #   dockerfile: Dockerfile
+    image: ghcr.io/5ammiches/sugarbar-api:latest
     ports:
       - "8000:8000"
     environment:
@@ -23,11 +24,12 @@ services:
     restart: unless-stopped
 
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        VITE_CONVEX_URL: ${VITE_CONVEX_URL}
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    #   args:
+    #     VITE_CONVEX_URL: ${VITE_CONVEX_URL}
+    image: ghcr.io/5ammiches/sugarbar-api:latest
     ports:
       - "3000:3000"
     env_file:
