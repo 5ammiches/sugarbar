@@ -18,6 +18,7 @@ services:
     image: cloudflare/cloudflared:latest
     command: tunnel --url http://api:8000
     depends_on:
+      # YUP
       - api
     restart: unless-stopped
 
