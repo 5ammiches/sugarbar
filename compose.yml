@@ -4,8 +4,8 @@ services:
     ports:
       - "8001:8000"
     environment:
-      - DISPLAY
-      - XAUTHORITY
+      - DISPLAY=localhost:10.0
+      - XAUTHORITY=/root/.Xauthority
       - MUSIXMATCH_PROFILE_PATH=/root/.crawl4ai/profiles/musixmatch
     volumes:
       - /root/.Xauthority:/root/.Xauthority:ro
