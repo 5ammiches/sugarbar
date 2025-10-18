@@ -29,7 +29,7 @@ services:
     #   dockerfile: Dockerfile
     #   args:
     #     VITE_CONVEX_URL: ${VITE_CONVEX_URL}
-    image: ghcr.io/5ammiches/sugarbar-api:latest
+    image: ghcr.io/5ammiches/sugarbar-frontend:latest
     ports:
       - "3000:3000"
     env_file:
