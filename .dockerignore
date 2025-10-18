@@ -1,6 +1,9 @@
 node_modules
 **/node_modules
 .pnpm-store
+api/
+api/.venv/
+.venv/
 
 # Build output
 dist

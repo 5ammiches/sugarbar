@@ -14,12 +14,22 @@ services:
     env_file:
       - .env
 
+  cloudflared:
+    profiles: ["dev"]
+    image: cloudflare/cloudflared:latest
+    command: tunnel --url http://api:8000
+    depends_on:
+      - api
+    restart: unless-stopped
+
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VITE_CONVEX_URL: ${VITE_CONVEX_URL}
     ports:
-      - "3000:80"
+      - "3000:3000"
     env_file:
       - .env
     depends_on:

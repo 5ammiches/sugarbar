@@ -24,8 +24,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(lyrics.router, tags=["lyrics"])
-app.include_router(youtube.router, tags=["youtube"])
+app.include_router(lyrics.router, prefix="/api", tags=["lyrics"])
+app.include_router(youtube.router, prefix="/api", tags=["youtube"])
 
 @app.get("/")
 async def root():

@@ -5,9 +5,9 @@ import { defineConfig } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  ssr: {
-    noExternal: ["@tanstack/router-core", "@tanstack/*"],
-  },
+  // ssr: {
+  //   noExternal: ["@tanstack/router-core", "@tanstack/*"],
+  // },
   server: {
     port: 3000,
   },

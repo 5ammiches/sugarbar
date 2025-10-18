@@ -1,15 +1,28 @@
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS build
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --prefer-offline --no-audit --progress=false
-COPY . .
-RUN npm run build:ssr
 
-FROM node:20-alpine AS production
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml ./
+
+RUN pnpm fetch
+
+COPY . .
+
+ARG VITE_CONVEX_URL
+ENV VITE_CONVEX_URL=$VITE_CONVEX_URL
+
+RUN pnpm install --frozen-lockfile --offline
+RUN pnpm run build
+
+FROM node:22-alpine
 WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=builder /app/dist /app/dist
-COPY --from=builder /app/package*.json /app/
-RUN npm ci --production --prefer-offline --no-audit --progress=false
+ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000
+
+COPY --from=build /app/.output /app/.output
+
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --prod --frozen-lockfile || true
+
 EXPOSE 3000
 CMD ["node", ".output/server/index.mjs"]
