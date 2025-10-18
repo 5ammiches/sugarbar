@@ -4,10 +4,11 @@ services:
     ports:
       - "8001:8000"
     environment:
-      - DISPLAY=host.docker.internal:0
+      - DISPLAY
+      - XAUTHORITY
       - MUSIXMATCH_PROFILE_PATH=/root/.crawl4ai/profiles/musixmatch
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ~/.Xauthority:/root/.Xauthority:ro
       - c4ai_chrome_profile:/root/.crawl4ai/profiles/musixmatch
     env_file:
       - .env
