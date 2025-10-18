@@ -24,10 +24,10 @@ jobs:
             context: .
             file: ./Dockerfile
             image: ghcr.io/${{ github.repository }}-frontend
-          - name: fastapi
-            context: ./api
             args:
               VITE_CONVEX_URL: ${VITE_CONVEX_URL}
+          - name: fastapi
+            context: ./api
             file: ./api/Dockerfile
             image: ghcr.io/${{ github.repository }}-api
     steps:
