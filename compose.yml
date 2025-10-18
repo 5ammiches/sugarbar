@@ -5,7 +5,7 @@ services:
     #   dockerfile: Dockerfile
     image: ghcr.io/5ammiches/sugarbar-api:latest
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       - DISPLAY=host.docker.internal:0
       - MUSIXMATCH_PROFILE_PATH=/root/.crawl4ai/profiles/musixmatch
