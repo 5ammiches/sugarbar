@@ -23,7 +23,7 @@ jobs:
             image: ghcr.io/${{ github.repository }}-frontend
           - name: fastapi
             context: ./api
-            file: ./Dockerfile
+            file: ./api/Dockerfile
             image: ghcr.io/${{ github.repository }}-api
     steps:
       - uses: actions/checkout@v4
