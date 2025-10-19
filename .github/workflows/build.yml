@@ -54,17 +54,8 @@ jobs:
         run: |
           for i in 1 2 3; do
             curl --fail --show-error --location \
-              -request GET "${{ secrets.COOLIFY_WEBHOOK }}" \
+              -X GET "${{ secrets.COOLIFY_WEBHOOK }}" \
               --header "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" && break
             echo "Retrying in 5s..."
             sleep 5
           done
-
-          # YUP
-          # for i in 1 2 3; do
-          #   curl --fail --show-error --location \
-          #     -X POST "${{ secrets.COOLIFY_WEBHOOK }}" \
-          #     --header "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" && break
-          #   echo "Retrying in 5s..."
-          #   sleep 5
-          # done
