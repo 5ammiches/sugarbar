@@ -9,9 +9,6 @@ RUN pnpm fetch
 
 COPY . .
 
-ARG VITE_CONVEX_URL
-ENV VITE_CONVEX_URL=$VITE_CONVEX_URL
-
 RUN pnpm install --frozen-lockfile --offline
 RUN pnpm run build
 
