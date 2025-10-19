@@ -53,9 +53,16 @@ jobs:
       - name: Trigger Coolify redeploy (with retries)
         run: |
           for i in 1 2 3; do
-            curl --fail --show-error --location \
-              -X POST "${{ secrets.COOLIFY_WEBHOOK }}" \
+            curl --request GET "${{ secrets.COOLIFY_WEBHOOK }}" \
               --header "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" && break
             echo "Retrying in 5s..."
             sleep 5
           done
+
+          # for i in 1 2 3; do
+          #   curl --fail --show-error --location \
+          #     -X POST "${{ secrets.COOLIFY_WEBHOOK }}" \
+          #     --header "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" && break
+          #   echo "Retrying in 5s..."
+          #   sleep 5
+          # done
