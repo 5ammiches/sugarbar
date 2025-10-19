@@ -60,6 +60,7 @@ jobs:
             sleep 5
           done
 
+          # YUP
           # for i in 1 2 3; do
           #   curl --fail --show-error --location \
           #     -X POST "${{ secrets.COOLIFY_WEBHOOK }}" \
