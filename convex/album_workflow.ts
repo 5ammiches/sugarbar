@@ -97,11 +97,8 @@ export const albumWorkflow = workflow.define({
 
     const upsertedArtistIds = await Promise.all(artistPromises);
 
-    // 4) Parallelize track pipeline: fetch track -> upsert -> link -> fetch lyrics
     const trackPromises = spotifyTrackIds.map((spId) =>
       (async () => {
-        console.log("spofit id:", spId);
-
         const track = await step.runAction(
           spot.getTrackById,
           { trackId: spId },
