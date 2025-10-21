@@ -184,17 +184,18 @@ export const fetchTrackPreviewInternal = internalAction({
       });
     } catch (error) {
       // If batch download fails, try individual candidates
-      for (const item of candidates.items.slice(0, 3)) {
-        try {
+      try {
+        for (const item of candidates.items.slice(0, 3)) {
           result = await ctx.runAction(internal.audio.downloadYTAudioPreview, {
             candidates: [item],
             trackId: trackId,
           });
           if (result) break;
-        } catch (e) {
-          // Continue to next candidate
-          continue;
         }
+      } catch (error) {
+        throw new Error(
+          `Failed to download preview for track ${trackId}: ${error}`
+        );
       }
     }
 
