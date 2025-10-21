@@ -92,7 +92,7 @@ async def youtube_preview_scrape(
                     "concurrent_fragment_downloads": 4,
                     "extract_flat": False,
                     "ignoreerrors": False,
-                    "cookies": YOUTUBE_COOKIES,
+                    "cookiefile": YOUTUBE_COOKIES,
                 }
 
                 with YoutubeDL(ydl_opts) as ydl:  # type: ignore
