@@ -3,6 +3,7 @@ import os
 import shutil
 import tempfile
 
+from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from yt_dlp import YoutubeDL
@@ -15,6 +16,9 @@ from app.models.models import (
 )
 from app.services.youtube import YoutubeScraper
 from app.utils.logger import NoResultsError, ProviderError, logger
+
+load_dotenv()
+YOUTUBE_COOKIES = os.getenv("YOUTUBE_COOKIES")
 
 router = APIRouter()
 
@@ -73,6 +77,7 @@ async def youtube_preview_scrape(
     last_err = None
     for item in req.candidates:
         try:
+            # FIX preview failing because cookies are not used when making youtube audio download
             with tempfile.TemporaryDirectory() as tmp:
                 # TODO abstract the download of the video url into the YoutubeScraper class
                 out_tmpl = os.path.join(tmp, "%(id)s.%(ext)s")
@@ -87,6 +92,7 @@ async def youtube_preview_scrape(
                     "concurrent_fragment_downloads": 4,
                     "extract_flat": False,
                     "ignoreerrors": False,
+                    "cookies": YOUTUBE_COOKIES,
                 }
 
                 with YoutubeDL(ydl_opts) as ydl:  # type: ignore
