@@ -95,6 +95,12 @@ async def youtube_preview_scrape(
                     "extract_flat": False,
                     "ignoreerrors": False,
                     "cookiefile": cookies_path,
+                    "extractor_args": {
+                        "youtube": {
+                            "player_client": ["default", "web_safari"],
+                            "player_js_version": "actual"
+                        }
+                    }
                 }
 
                 with YoutubeDL(ydl_opts) as ydl:  # type: ignore
