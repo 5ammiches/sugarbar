@@ -18,7 +18,9 @@ from app.services.youtube import YoutubeScraper
 from app.utils.logger import NoResultsError, ProviderError, logger
 
 load_dotenv()
-YOUTUBE_COOKIES = os.getenv("YOUTUBE_COOKIES")
+cookies_path = os.getenv("YOUTUBE_COOKIES")
+if not cookies_path or not os.path.exists(cookies_path):
+    logger.warning("YOUTUBE_COOKIES missing/unreadable: %r", cookies_path)
 
 router = APIRouter()
 
@@ -92,7 +94,7 @@ async def youtube_preview_scrape(
                     "concurrent_fragment_downloads": 4,
                     "extract_flat": False,
                     "ignoreerrors": False,
-                    "cookiefile": YOUTUBE_COOKIES,
+                    "cookiefile": cookies_path,
                 }
 
                 with YoutubeDL(ydl_opts) as ydl:  # type: ignore
