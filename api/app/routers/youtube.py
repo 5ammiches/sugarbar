@@ -98,7 +98,7 @@ async def youtube_preview_scrape(
                     "extractor_args": {
                         "youtube": {
                             "player_client": ["default", "web_safari"],
-                            "player_js_version": "actual"
+                            "player_js_version": ["actual"]
                         }
                     }
                 }
