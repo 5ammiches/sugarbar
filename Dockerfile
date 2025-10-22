@@ -1,6 +1,11 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
+
+ARG VITE_CONVEX_URL
+
+ENV VITE_CONVEX_URL=${VITE_CONVEX_URL}
+
 RUN corepack enable
 
 COPY package.json pnpm-lock.yaml ./

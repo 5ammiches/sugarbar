@@ -1,0 +1,23 @@
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    image: sugarbar-api:dev
+    volumes:
+      - /Users/sammi/.youtube_cookies.txt:/root/.youtube_cookies.txt
+      - c4ai_chrome_profile:/root/.crawl4ai/profiles/musixmatch
+      - /root/.Xauthority:/root/.Xauthority:ro
+    environment:
+      - DISPLAY=localhost:10.0
+      - XAUTHORITY=/root/.Xauthority
+    env_file: .env
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_CONVEX_URL: https://descriptive-aardvark-370.convex.cloud
+    image: sugarbar-frontend:dev
+    env_file: .env
