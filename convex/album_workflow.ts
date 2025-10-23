@@ -13,7 +13,7 @@ const workflow = new WorkflowManager(components.workflow, {
       initialBackoffMs: 200,
       base: 2,
     },
-    maxParallelism: 7,
+    maxParallelism: 1,
   },
 });
 
