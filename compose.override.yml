@@ -19,5 +19,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_CONVEX_URL: https://descriptive-aardvark-370.convex.cloud
+    ports:
+      - "3001:3000"
     image: sugarbar-frontend:dev
     env_file: .env
