@@ -9,7 +9,7 @@ services:
       - DISPLAY=localhost:10.0
       - XAUTHORITY=/root/.Xauthority
       - MUSIXMATCH_PROFILE_PATH=/root/.crawl4ai/profiles/musix
-      - YOUTUBE_COOKIES=/root/.youtube_cookies.txt
+      - YOUTUBE_COOKIES_PATH=/root/.youtube_cookies.txt
     volumes:
       - /root/.Xauthority:/root/.Xauthority:ro
       - /root/.crawl4ai/profiles/musix:/root/.crawl4ai/profiles/musix

@@ -15,16 +15,17 @@ from app.models.models import (
     SearchResultItem,
 )
 from app.services.youtube import YoutubeScraper
+from app.utils.config import get_settings
 from app.utils.logger import NoResultsError, ProviderError, logger
 
-load_dotenv()
+# load_dotenv()
 
 
-cookies_path = os.getenv("YOUTUBE_COOKIES")
-if not cookies_path or not os.path.exists(cookies_path):
-    logger.warning("YOUTUBE_COOKIES missing/unreadable: %r", cookies_path)
-else:
-    logger.info("Youtube cookies found in path: %r", cookies_path)
+# cookies_path = os.getenv("YOUTUBE_COOKIES")
+# if not cookies_path or not os.path.exists(cookies_path):
+#     logger.warning("YOUTUBE_COOKIES missing/unreadable: %r", cookies_path)
+# else:
+#     logger.info("Youtube cookies found in path: %r", cookies_path)
 
 router = APIRouter()
 
@@ -80,6 +81,7 @@ async def youtube_preview_scrape(
         raise HTTPException(status_code=400, detail="candidateUrls required")
 
     scraper = YoutubeScraper()
+    settings = get_settings()
 
     last_err = None
 
@@ -99,7 +101,7 @@ async def youtube_preview_scrape(
                     "concurrent_fragment_downloads": 4,
                     "extract_flat": False,
                     "ignoreerrors": False,
-                    "cookies": cookies_path,
+                    "cookies": settings.youtube_cookies_path,
                     "extractor_args": {
                         "youtube": {
                             "player_client": ["default", "web_safari"],
