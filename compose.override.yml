@@ -1,19 +1,24 @@
 services:
   api:
+    image: sugarbar-api:dev
     build:
       context: ./api
       dockerfile: Dockerfile
-    image: sugarbar-api:dev
+    ports:
+      - "8001:8000"
     volumes:
-      - /Users/sammi/.youtube_cookies.txt:/root/.youtube_cookies.txt
-      - c4ai_chrome_profile:/root/.crawl4ai/profiles/musixmatch
+      - /home/sammi/.youtube_cookies.txt:/root/.youtube_cookies.txt
+      - /home/sammi/.crawl4ai/profiles/musixmatch-login:/root/.crawl4ai/profiles/musixmatch
       - /root/.Xauthority:/root/.Xauthority:ro
     environment:
+      - YOUTUBE_COOKIES_PATH=/root/.youtube_cookies.txt
+      - MUSIXMATCH_PROFILE_PATH=/root/.crawl4ai/profiles/musixmatch
       - DISPLAY=localhost:10.0
       - XAUTHORITY=/root/.Xauthority
     env_file: .env
 
   frontend:
+    image: sugarbar-frontend:dev
     build:
       context: .
       dockerfile: Dockerfile
@@ -21,5 +26,4 @@ services:
         VITE_CONVEX_URL: https://descriptive-aardvark-370.convex.cloud
     ports:
       - "3001:3000"
-    image: sugarbar-frontend:dev
     env_file: .env

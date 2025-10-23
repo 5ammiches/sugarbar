@@ -13,6 +13,7 @@ async def lifespan(app: FastAPI):
     app.state.settings = get_settings()
     yield
 
+
 app = FastAPI(lifespan=lifespan)
 setup_logging_and_handlers(app)
 
@@ -27,9 +28,13 @@ app.add_middleware(
 app.include_router(lyrics.router, prefix="/api", tags=["lyrics"])
 app.include_router(youtube.router, prefix="/api", tags=["youtube"])
 
+
 @app.get("/")
 async def root():
+    settings = get_settings()
+    print(f"COOKIES PATH: {settings.youtube_cookies_path}")
     return {"message": "Music API is running"}
+
 
 @app.get("/health")
 async def health():
