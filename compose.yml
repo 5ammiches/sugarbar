@@ -1,6 +1,7 @@
 services:
   api:
     image: ghcr.io/5ammiches/sugarbar-api:latest
+    pull_policy: always
     # ports:
     #   - "8001:8000"
     environment:
@@ -27,6 +28,7 @@ services:
 
   frontend:
     image: ghcr.io/5ammiches/sugarbar-frontend:latest
+    pull_policy: always
     # ports:
     #   - "3000:3000"
     environment:
