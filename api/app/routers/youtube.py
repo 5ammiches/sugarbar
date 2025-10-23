@@ -105,7 +105,7 @@ async def youtube_preview_scrape(
                     "cookies": settings.youtube_cookies_path,
                     "extractor_args": {
                         "youtube": {
-                            "player_client": ["default", "web_safari"],
+                            "player_client": ["default"],
                             "player_js_version": ["actual"],
                         }
                     },
