@@ -82,9 +82,9 @@ export default function AlbumReviewDrawer({
       albumId ? { albumId: albumId as Id<"album"> } : "skip"
     ),
     enabled: !!albumId,
-    staleTime: 5 * 60 * 1000, // 5 minutes - cache data to make subsequent opens instant
-    gcTime: 10 * 60 * 1000, // 10 minutes - keep data in cache longer
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   }) as {
     data:
       | {

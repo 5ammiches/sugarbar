@@ -64,7 +64,7 @@ export const fetchLyricsInternal = internalAction({
     trackId: v.id("track"),
     forceOverwrite: v.optional(v.boolean()),
   },
-  handler: async (ctx, { trackId, forceOverwrite }) => {
+  handler: async (ctx, { trackId, forceOverwrite }): Promise<boolean> => {
     const track = await ctx.runQuery(internal.db.getTrack, { trackId });
     if (!track) return false;
 

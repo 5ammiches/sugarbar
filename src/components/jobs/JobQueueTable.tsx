@@ -1,8 +1,25 @@
-import React, { useMemo, useState, useCallback } from "react";
-import { Doc, Id } from "@/../convex/_generated/dataModel";
 import { api } from "@/../convex/_generated/api";
-import { useQueryClient } from "@tanstack/react-query";
+import { Doc, Id } from "@/../convex/_generated/dataModel";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import { convexQuery } from "@convex-dev/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -15,38 +32,19 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
-import AlbumCell from "../albums/album-cell";
 import {
   ArrowUpDown,
-  ChevronDown,
-  MoreHorizontal,
-  Search,
-  RefreshCw,
-  XCircle,
-  Check,
-  Eye,
   Calendar,
+  Check,
   Clock,
+  Eye,
+  MoreHorizontal,
+  RefreshCw,
+  Search,
+  XCircle,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useCallback, useMemo, useState } from "react";
+import AlbumCell from "../albums/album-cell";
 
 export interface JobRow {
   workflowId: string;
@@ -66,6 +64,7 @@ export interface JobRow {
   error?: string;
   args?: any;
   albumId?: string;
+  spotifyAlbumId?: string;
   albumTitle?: string;
   artistName?: string;
   albumCover?: string;
@@ -75,7 +74,11 @@ interface JobQueueTableProps {
   jobRows: JobRow[];
   albumMap: Map<Id<"album">, Doc<"album">>;
   onCancel: (workflowId: string) => Promise<void>;
-  onRetry: (workflowId: string) => Promise<void>;
+  onRetry: (
+    workflowId: string,
+    albumId?: string,
+    spotifyAlbumId?: string
+  ) => Promise<void>;
   onApprove: (workflowId: string, albumId?: string) => Promise<void>;
   onReject: (workflowId: string, albumId?: string) => Promise<void>;
   jobGlobalFilter: string;
@@ -162,7 +165,9 @@ export default function JobQueueTable({
 }: JobQueueTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [loadingActions, setLoadingActions] = useState<Record<string, string>>({});
+  const [loadingActions, setLoadingActions] = useState<Record<string, string>>(
+    {}
+  );
   const queryClient = useQueryClient();
 
   // Debounced prefetch to avoid too many requests on rapid hover
@@ -173,7 +178,9 @@ export default function JobQueueTable({
         if (timeoutId) clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
           queryClient.prefetchQuery({
-            ...convexQuery(api.db.getAlbumDetails, { albumId: albumId as Id<"album"> }),
+            ...convexQuery(api.db.getAlbumDetails, {
+              albumId: albumId as Id<"album">,
+            }),
             staleTime: 5 * 60 * 1000, // 5 minutes
           });
         }, 200); // 200ms delay to avoid excessive prefetching
@@ -182,7 +189,11 @@ export default function JobQueueTable({
     [queryClient]
   );
 
-  const handleAction = async (workflowId: string, action: string, fn: () => Promise<void>) => {
+  const handleAction = async (
+    workflowId: string,
+    action: string,
+    fn: () => Promise<void>
+  ) => {
     setLoadingActions((prev) => ({ ...prev, [workflowId]: action }));
     try {
       await fn();
@@ -226,7 +237,9 @@ export default function JobQueueTable({
           </Button>
         ),
         cell: ({ getValue }) => (
-          <div className="font-medium text-sm">{String(getValue() || "Unknown")}</div>
+          <div className="font-medium text-sm">
+            {String(getValue() || "Unknown")}
+          </div>
         ),
         size: 150,
       },
@@ -248,7 +261,10 @@ export default function JobQueueTable({
           return (
             <Badge
               variant={getStatusBadgeVariant(status)}
-              className={cn("text-xs font-medium px-2 py-1", getStatusColor(status))}
+              className={cn(
+                "text-xs font-medium px-2 py-1",
+                getStatusColor(status)
+              )}
             >
               {status.replace(/_/g, " ")}
             </Badge>
@@ -276,7 +292,9 @@ export default function JobQueueTable({
                 <div className="w-full bg-muted rounded-full h-1.5">
                   <div
                     className="bg-primary h-1.5 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+                    style={{
+                      width: `${Math.min(100, Math.max(0, progress))}%`,
+                    }}
                   />
                 </div>
                 <div className="text-xs text-muted-foreground text-center">
@@ -355,7 +373,11 @@ export default function JobQueueTable({
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 w-8 p-0" disabled={!!isLoading}>
+                  <Button
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    disabled={!!isLoading}
+                  >
                     {isLoading ? (
                       <RefreshCw className="h-4 w-4 animate-spin" />
                     ) : (
@@ -379,7 +401,9 @@ export default function JobQueueTable({
                   {canCancel && (
                     <DropdownMenuItem
                       onClick={() =>
-                        handleAction(job.workflowId, "cancel", () => onCancel(job.workflowId))
+                        handleAction(job.workflowId, "cancel", () =>
+                          onCancel(job.workflowId)
+                        )
                       }
                       className="text-destructive focus:text-destructive"
                     >
@@ -388,16 +412,16 @@ export default function JobQueueTable({
                     </DropdownMenuItem>
                   )}
 
-                  {canRetry && (
-                    <DropdownMenuItem
-                      onClick={() =>
-                        handleAction(job.workflowId, "retry", () => onRetry(job.workflowId))
-                      }
-                    >
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Retry
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem
+                    onClick={() =>
+                      handleAction(job.workflowId, "retry", () =>
+                        onRetry(job.workflowId, job.albumId, job.spotifyAlbumId)
+                      )
+                    }
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Retry
+                  </DropdownMenuItem>
 
                   {canReview && (
                     <>
@@ -425,10 +449,6 @@ export default function JobQueueTable({
                       </DropdownMenuItem>
                     </>
                   )}
-
-                  {!job.albumId && !canCancel && !canRetry && !canReview && (
-                    <DropdownMenuItem disabled>No actions available</DropdownMenuItem>
-                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -455,7 +475,9 @@ export default function JobQueueTable({
       job.albumId,
     ].filter(Boolean); // Remove undefined/null values
 
-    return searchableFields.some((field) => String(field).toLowerCase().includes(searchValue));
+    return searchableFields.some((field) =>
+      String(field).toLowerCase().includes(searchValue)
+    );
   };
 
   const table = useReactTable({
@@ -513,7 +535,10 @@ export default function JobQueueTable({
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="hover:bg-transparent border-b">
+              <TableRow
+                key={headerGroup.id}
+                className="hover:bg-transparent border-b"
+              >
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
@@ -522,7 +547,10 @@ export default function JobQueueTable({
                   >
                     {header.isPlaceholder
                       ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -557,14 +585,20 @@ export default function JobQueueTable({
                       className="px-4 py-4 align-top"
                       style={{ width: cell.column.columnDef.size }}
                     >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   <div className="flex flex-col items-center justify-center space-y-2 text-muted-foreground">
                     <RefreshCw className="h-8 w-8 opacity-50" />
                     <p>No jobs found</p>
@@ -584,7 +618,8 @@ export default function JobQueueTable({
               Showing {table.getRowModel().rows.length} of {jobRows.length} jobs
               {table.getPageCount() > 1 && (
                 <span className="ml-2">
-                  (Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()})
+                  (Page {table.getState().pagination.pageIndex + 1} of{" "}
+                  {table.getPageCount()})
                 </span>
               )}
             </p>

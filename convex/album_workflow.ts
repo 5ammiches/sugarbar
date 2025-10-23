@@ -1,17 +1,19 @@
+import { Track } from "@/shared/typings";
 import { vWorkflowId, WorkflowManager } from "@convex-dev/workflow";
 import { vResultValidator } from "@convex-dev/workpool";
 import { v } from "convex/values";
 import { components, internal } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 import { action, internalMutation } from "./_generated/server";
 
-export const workflow = new WorkflowManager(components.workflow, {
+const workflow = new WorkflowManager(components.workflow, {
   workpoolOptions: {
     defaultRetryBehavior: {
       maxAttempts: 3,
       initialBackoffMs: 200,
       base: 2,
     },
-    maxParallelism: 5,
+    maxParallelism: 7,
   },
 });
 
@@ -27,7 +29,6 @@ export const albumWorkflow = workflow.define({
     const lyricRetry = { maxAttempts: 6, initialBackoffMs: 300, base: 2 };
     const audioRetry = { maxAttempts: 3, initialBackoffMs: 300, base: 2 };
 
-    // 1) Fetch album and upsert
     const album = await step.runAction(
       spot.getAlbumById,
       { albumId },
@@ -54,7 +55,7 @@ export const albumWorkflow = workflow.define({
           workflowName: "albumWorkflow",
           args: { albumId: albumDbId, spotifyAlbumId: albumId },
           context: { albumId: albumDbId, spotifyAlbumId: albumId },
-          status: "queued",
+          status: "in_progress",
           startedAt: Date.now(),
         },
         { name: "workflow_jobs.createWorkflowJob" }
@@ -97,40 +98,50 @@ export const albumWorkflow = workflow.define({
 
     const upsertedArtistIds = await Promise.all(artistPromises);
 
-    const trackPromises = spotifyTrackIds.map((spId) =>
-      (async () => {
-        const track = await step.runAction(
+    const tracks: Track[] = await Promise.all(
+      spotifyTrackIds.map((spId) =>
+        step.runAction(
           spot.getTrackById,
           { trackId: spId },
           { retry: spotifyRetry, name: "spotify.getTrackById" }
-        );
+        )
+      )
+    );
 
-        const trackId = await step.runMutation(
-          db.upsertTrack,
-          { track },
-          { name: "db.upsertTrack" }
-        );
+    const trackIds: Id<"track">[] = await Promise.all(
+      tracks.map((track) =>
+        step.runMutation(db.upsertTrack, { track }, { name: "db.upsertTrack" })
+      )
+    );
 
-        await step.runMutation(
+    await Promise.all(
+      trackIds.map((id) =>
+        step.runMutation(
           db.upsertAlbumTrack,
-          { albumId: albumDbId, trackId },
+          { albumId: albumDbId, trackId: id },
           { name: "db.upsertAlbumTrack" }
-        );
+        )
+      )
+    );
 
-        await step.runAction(
+    await Promise.all(
+      trackIds.map((id) =>
+        step.runAction(
           lyric.fetchLyricsInternal,
-          { trackId },
-          { retry: lyricRetry, name: "lyric.fetchLyrics" }
-        );
+          { trackId: id },
+          { retry: lyricRetry, name: "lyric.fetchLyricsInternal" }
+        )
+      )
+    );
 
-        await step.runAction(
+    await Promise.all(
+      trackIds.map((id) =>
+        step.runAction(
           audio.fetchTrackPreviewInternal,
-          { trackId },
-          { retry: audioRetry, name: "audio.fetchTrackPreview" }
-        );
-
-        return trackId;
-      })()
+          { trackId: id },
+          { retry: audioRetry, name: "audio.fetchTrackPreviewInternal" }
+        )
+      )
     );
   },
 });

@@ -134,7 +134,6 @@ function SearchResultCard({
   const thumbnailUrl = `https://img.youtube.com/vi/${result.videoId}/hqdefault.jpg`;
 
   const handleDownloadClick = () => {
-    // validate previewStartInput locally and call onDownload
     const parsed = Number.parseInt(previewStartInput || "0", 10);
     if (Number.isNaN(parsed) || parsed < 0) {
       setPreviewStartError("Start must be 0 or greater (seconds)");
@@ -368,7 +367,6 @@ export function YouTubeSearchDialog({
 
       if (success) {
         onDownloadSuccess?.();
-        // Close dialog after successful download
         onClose();
       } else {
         console.error("Failed to download audio: No result returned");

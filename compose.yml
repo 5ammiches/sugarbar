@@ -8,23 +8,14 @@ services:
       - SERVICE_FQDN_API_8000
       - DISPLAY=localhost:10.0
       - XAUTHORITY=/root/.Xauthority
-      - MUSIXMATCH_PROFILE_PATH=/root/.crawl4ai/profiles/musixmatch
+      - MUSIXMATCH_PROFILE_PATH=/root/.crawl4ai/profiles/musix
       - YOUTUBE_COOKIES=/root/.youtube_cookies.txt
-
     volumes:
       - /root/.Xauthority:/root/.Xauthority:ro
-      - c4ai_chrome_profile:/root/.crawl4ai/profiles/musixmatch
-      - /root/.youtube_cookies.txt:/root/.youtube_cookies.txt
+      - c4ai_chrome_profile:/root/.crawl4ai/profiles/musix
+      - youtube_cookies:/root/.youtube_cookies.txt
     env_file:
       - .env
-
-  cloudflared:
-    profiles: ["dev"]
-    image: cloudflare/cloudflared:latest
-    command: tunnel --url http://api:8000
-    depends_on:
-      - api
-    restart: unless-stopped
 
   frontend:
     image: ghcr.io/5ammiches/sugarbar-frontend:latest
@@ -40,3 +31,4 @@ services:
 
 volumes:
   c4ai_chrome_profile:
+  youtube_cookies:

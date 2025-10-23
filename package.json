@@ -5,7 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "npm-run-all --parallel dev:convex dev:vite",
+    "dev": "npm-run-all dev:vite",
     "dev:convex": "convex dev",
     "dev:vite": "vite dev --port 3000",
     "seed": "npx convex dev --once && npx convex import --table tasks sampleData.jsonl",

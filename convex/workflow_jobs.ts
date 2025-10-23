@@ -199,6 +199,7 @@ export const patchJobContext = internalMutation({
 /**
  * Sync a single workflow's status and ensure a job row exists/updated.
  */
+// TODO simplify this later by showing the status badge instead of computing the progress
 export const syncJob = mutation({
   args: { workflowId: v.string() },
   handler: async (ctx, { workflowId }) => {
@@ -210,6 +211,25 @@ export const syncJob = mutation({
         workflowId,
       });
     } catch (e) {
+      const existing = await ctx.db
+        .query("workflow_job")
+        .withIndex("by_workflow_id", (q) => q.eq("workflow_id", workflowId))
+        .first();
+
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          status: "canceled",
+          updated_at: now,
+          error: "Workflow not found",
+        });
+
+        const albumId = existing.context?.albumId as Id<"album"> | undefined;
+        if (albumId) {
+          await updateAlbumLatest(ctx, albumId, workflowId, "canceled", now);
+        }
+        return existing;
+      }
+
       throw e;
     }
 
@@ -350,13 +370,18 @@ export const syncJobs = mutation({
   handler: async (ctx, { workflowIds }) => {
     const results: Array<Doc<"workflow_job"> | null> = [];
     for (const workflowId of workflowIds) {
-      const job = await ctx.runMutation(
-        (internal.workflow_jobs as any).syncJob,
-        {
-          workflowId,
-        }
-      );
-      results.push(job);
+      try {
+        const job = await ctx.runMutation(
+          (internal.workflow_jobs as any).syncJob,
+          {
+            workflowId,
+          }
+        );
+        if (!job) continue;
+        results.push(job);
+      } catch (e) {
+        continue;
+      }
     }
     return results;
   },
@@ -364,44 +389,65 @@ export const syncJobs = mutation({
 
 /**
  * Retry a job by starting a new workflow instance (supported workflows only).
- * Only supports albumWorkflow retries when job.context.albumId (internal) is present.
+ * Supports albumWorkflow retries; if the job or workflow cannot be found by id, falls back to starting a new run with spotifyAlbumId from args/context or derived from albumId.
  */
 export const retryJob = action({
   args: { workflowId: v.string() },
   handler: async (ctx, { workflowId }): Promise<{ newWorkflowId: string }> => {
-    const job = await ctx.runQuery(internal.workflow_jobs.getWorkflowJobById, {
+    let job = await ctx.runQuery(internal.workflow_jobs.getWorkflowJobById, {
       workflowId,
     });
 
+    let workflowName: string | undefined =
+      (job?.workflow_name as any) ?? undefined;
+
+    let fallbackContext: any = undefined;
+    let fallbackArgs: any = undefined;
     if (!job) {
-      throw new Error("Job not found");
+      try {
+        const statusResp = await ctx.runQuery(
+          components.workflow.workflow.getStatus,
+          { workflowId }
+        );
+        workflowName = statusResp.workflow?.name ?? workflowName;
+        fallbackArgs = statusResp.workflow?.args ?? undefined;
+        fallbackContext = statusResp.workflow?.onComplete?.context ?? undefined;
+      } catch {}
     }
 
-    const name = job.workflow_name;
-    if (name.startsWith("album_workflow")) {
-      // Require internal albumId in job.context
-      const albumId = (job.context && job.context.albumId) as
+    const name = workflowName ?? "unknown";
+    if (name.startsWith("albumWorkflow")) {
+      const context = (job?.context ?? fallbackContext ?? {}) as Record<
+        string,
+        any
+      >;
+      const args = (job?.args ?? fallbackArgs ?? {}) as Record<string, any>;
+
+      const albumId = (context.albumId ?? args.albumId) as string | undefined;
+      let spotifyAlbumId = (context.spotifyAlbumId ?? args.spotifyAlbumId) as
         | string
         | undefined;
-      if (!albumId) {
-        throw new Error("Missing internal albumId to retry albumWorkflow");
+
+      if (!spotifyAlbumId && albumId) {
+        try {
+          const album = await ctx.runQuery(internal.db.getAlbum, {
+            albumId: albumId as Id<"album">,
+          });
+          spotifyAlbumId =
+            (album?.metadata as any)?.provider_ids?.spotify ?? undefined;
+        } catch (e) {
+          throw e;
+        }
+      }
+
+      if (!spotifyAlbumId) {
+        throw new Error("Missing Spotify album id to retry albumWorkflow");
       }
 
       const newWorkflowId = await ctx.runAction(
         api.album_workflow.startAlbumWorkflow,
-        { albumId }
+        { albumId: spotifyAlbumId }
       );
-
-      // Create or overwrite the per-album job row for the retry run. Prefer
-      // using the internal albumId in args/context so createWorkflowJob can find it.
-      await ctx.runMutation(internal.workflow_jobs.createWorkflowJob, {
-        workflowId: newWorkflowId,
-        workflowName: "albumWorkflow",
-        args: { albumId },
-        context: { albumId, ...(job.context ?? {}) },
-        status: "queued",
-        startedAt: Date.now(),
-      });
 
       return { newWorkflowId };
     }
