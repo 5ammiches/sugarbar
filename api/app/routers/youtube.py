@@ -102,7 +102,7 @@ async def youtube_preview_scrape(
                     "concurrent_fragment_downloads": 4,
                     "extract_flat": False,
                     "ignoreerrors": False,
-                    "cookies": settings.youtube_cookies_path,
+                    "cookiefile": settings.youtube_cookies_path,
                     "extractor_args": {
                         "youtube": {
                             "player_client": ["default"],

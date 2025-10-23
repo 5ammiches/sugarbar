@@ -109,7 +109,7 @@ export const downloadYTAudioPreview = internalAction({
         title: v.string(),
         durationSec: v.number(),
         url: v.string(),
-        category: v.string(),
+        category: v.optional(v.string()),
       })
     ),
     bitrateKbps: v.optional(v.number()),
@@ -301,28 +301,28 @@ export const getPreviewTrackIdsForAlbum = query({
 export const fetchAudioPreviewFromUrl = action({
   args: {
     trackId: v.id("track"),
-    youtubeUrl: v.string(),
+    searchResult: v.array(
+      v.object({
+        videoId: v.string(),
+        title: v.string(),
+        durationSec: v.number(),
+        url: v.string(),
+        category: v.optional(v.string()),
+      })
+    ),
     previewStartSec: v.optional(v.number()),
   },
   returns: v.boolean(),
   handler: async (
     ctx,
-    { trackId, youtubeUrl, previewStartSec }
+    { trackId, searchResult, previewStartSec }
   ): Promise<boolean> => {
     try {
       const result = await ctx.runAction(
         internal.audio.downloadYTAudioPreview,
         {
           trackId,
-          candidates: [
-            {
-              videoId: "",
-              title: "",
-              durationSec: 0,
-              url: youtubeUrl,
-              category: "",
-            },
-          ],
+          candidates: searchResult,
           previewStartSec: previewStartSec,
         }
       );
@@ -339,7 +339,10 @@ export const fetchAudioPreviewFromUrl = action({
 
       return true;
     } catch (error) {
-      console.error(`Failed to download audio from URL ${youtubeUrl}:`, error);
+      console.error(
+        `Failed to download audio from URL ${searchResult[0].url}:`,
+        error
+      );
       return false;
     }
   },

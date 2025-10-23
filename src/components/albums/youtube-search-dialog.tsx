@@ -114,7 +114,7 @@ function SearchResultCard({
   downloadDisabledReason?: string | null;
 }) {
   const [showEmbed, setShowEmbed] = useState(false);
-  const [previewStartInput, setPreviewStartInput] = useState<string>("0");
+  const [previewStartInput, setPreviewStartInput] = useState<string>("30");
   const [previewStartError, setPreviewStartError] = useState<string | null>(
     null
   );
@@ -345,7 +345,6 @@ export function YouTubeSearchDialog({
       return;
     }
 
-    // validate again as a safety net
     const parsed = Number.parseInt(String(previewStartSec || 0), 10);
     if (Number.isNaN(parsed) || parsed < 0) {
       console.error("Invalid preview start seconds");
@@ -361,7 +360,10 @@ export function YouTubeSearchDialog({
     try {
       const success = await convex.action(api.audio.fetchAudioPreviewFromUrl, {
         trackId,
-        youtubeUrl: result.url,
+        searchResult: [result].map((r) => ({
+          ...r,
+          category: r.category || "music",
+        })),
         previewStartSec: parsed,
       });
 
@@ -487,9 +489,7 @@ export function YouTubeSearchDialog({
                       result={result}
                       expectedDuration={expectedDuration}
                       onSelect={() => handleOpenInYouTube(result)}
-                      onDownload={(res, startSec) =>
-                        handleDownloadAudio(res, startSec)
-                      }
+                      onDownload={handleDownloadAudio}
                       isDownloading={downloadingVideo === result.videoId}
                       downloadDisabledReason={
                         !trackId ? "No track selected" : null

@@ -82,7 +82,7 @@ export const YTSearchResultItem = z.object({
   title: z.string(),
   durationSec: z.number(),
   url: z.string(),
-  category: z.string(),
+  category: z.optional(z.string()),
 });
 
 export const YTSearchResponseSchema = z.object({
