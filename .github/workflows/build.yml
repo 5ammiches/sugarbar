@@ -27,8 +27,8 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          # build-args: |
-          #   VITE_CONVEX_URL=${{ secrets.VITE_CONVEX_URL }}
+          build-args: |
+            VITE_CONVEX_URL=${{ secrets.VITE_CONVEX_URL }}
           push: true
           tags: |
             ghcr.io/${{ github.repository }}-frontend:latest
