@@ -11,14 +11,9 @@ from dotenv import load_dotenv
 from app.utils.logger import NoResultsError, ProviderError
 
 load_dotenv()
-FFMPEG = shutil.which("ffmpeg") or "/usr/bin/ffmpeg"
 
-# raw_key: Optional[str] = os.getenv("YOUTUBE_API_KEY")
-# if raw_key is None:
-#     raise RuntimeError(
-#         "YOUTUBE_API_KEY is missing. Put it in your environment or a .env file."
-#     )
-# API_KEY:  Final[str] = raw_key
+
+FFMPEG = shutil.which("ffmpeg") or "/usr/bin/ffmpeg"
 
 
 class YoutubeScraper:
@@ -94,8 +89,7 @@ class YoutubeScraper:
             )
 
             for section in contents:
-                items = section.get("itemSectionRenderer",
-                                    {}).get("contents", [])
+                items = section.get("itemSectionRenderer", {}).get("contents", [])
 
                 for item in items:
                     video_renderer = item.get("videoRenderer")
@@ -107,15 +101,12 @@ class YoutubeScraper:
                         continue
 
                     # Extract title
-                    title_runs = video_renderer.get(
-                        "title", {}).get("runs", [])
+                    title_runs = video_renderer.get("title", {}).get("runs", [])
                     title = title_runs[0].get("text", "") if title_runs else ""
 
                     # Extract uploader
-                    owner_text = video_renderer.get(
-                        "ownerText", {}).get("runs", [])
-                    uploader = owner_text[0].get(
-                        "text", "") if owner_text else ""
+                    owner_text = video_renderer.get("ownerText", {}).get("runs", [])
+                    uploader = owner_text[0].get("text", "") if owner_text else ""
 
                     # Extract duration
                     duration_text = video_renderer.get("lengthText", {}).get(
@@ -127,8 +118,7 @@ class YoutubeScraper:
                     ):  # Skip live streams and videos without duration
                         continue
 
-                    duration_seconds = self._parse_duration_string(
-                        duration_text)
+                    duration_seconds = self._parse_duration_string(duration_text)
 
                     result = {
                         "videoId": video_id,
@@ -157,8 +147,7 @@ class YoutubeScraper:
         """Search YouTube using manual scraping approach"""
         search_query = f"'{title}' {artist}"
         encoded_query = urllib.parse.quote(search_query)
-        search_url = f"https://www.youtube.com/results?search_query={
-            encoded_query}"
+        search_url = f"https://www.youtube.com/results?search_query={encoded_query}"
 
         try:
             response = self.session.get(search_url, timeout=10)
@@ -173,8 +162,7 @@ class YoutubeScraper:
             search_results = self._parse_search_results(yt_data, limit)
 
             if not search_results:
-                raise NoResultsError(
-                    f"No search results found for: {search_query}")
+                raise NoResultsError(f"No search results found for: {search_query}")
 
             allowed_duration_start = duration_sec - self.duration_match_threshold
             allowed_duration_end = duration_sec + self.duration_match_threshold
@@ -198,14 +186,12 @@ class YoutubeScraper:
                     f"No duration-matched results found for: {search_query}"
                 )
 
-            filtered_results.sort(key=lambda x: abs(
-                x["durationSec"] - duration_sec))
+            filtered_results.sort(key=lambda x: abs(x["durationSec"] - duration_sec))
 
             return filtered_results[:5]
 
         except requests.RequestException as e:
-            raise ProviderError(
-                f"YouTube scraping request failed: {str(e)}") from e
+            raise ProviderError(f"YouTube scraping request failed: {str(e)}") from e
         except Exception as e:
             raise ProviderError(f"YouTube scraping error: {str(e)}") from e
 

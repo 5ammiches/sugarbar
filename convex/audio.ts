@@ -1,7 +1,7 @@
 import { stripFeaturingCredits } from "@/shared/helpers";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 import {
   action,
   internalAction,
@@ -146,14 +146,17 @@ export const fetchTrackPreviewInternal = internalAction({
   args: {
     trackId: v.id("track"),
   },
-  handler: async (ctx, { trackId }) => {
+  handler: async (
+    ctx,
+    { trackId }
+  ): Promise<Doc<"audio_preview"> | undefined> => {
     const existing = await ctx.runQuery(api.audio.getTrackPreview, {
       trackId,
     });
     if (existing) return;
 
     const track = await ctx.runQuery(internal.db.getTrack, { trackId });
-    if (!track) return false;
+    if (!track) return;
 
     const artist = await ctx.runQuery(internal.db.getArtist, {
       artistId: track.primary_artist_id,

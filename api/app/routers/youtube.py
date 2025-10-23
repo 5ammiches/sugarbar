@@ -18,11 +18,16 @@ from app.services.youtube import YoutubeScraper
 from app.utils.logger import NoResultsError, ProviderError, logger
 
 load_dotenv()
+
+
 cookies_path = os.getenv("YOUTUBE_COOKIES")
 if not cookies_path or not os.path.exists(cookies_path):
     logger.warning("YOUTUBE_COOKIES missing/unreadable: %r", cookies_path)
+else:
+    logger.info("Youtube cookies found in path: %r", cookies_path)
 
 router = APIRouter()
+
 
 @router.post("/youtube/search-scrape", response_model=SearchResponse)
 async def youtube_search_scrape(
@@ -77,9 +82,9 @@ async def youtube_preview_scrape(
     scraper = YoutubeScraper()
 
     last_err = None
+
     for item in req.candidates:
         try:
-            # FIX preview failing because cookies are not used when making youtube audio download
             with tempfile.TemporaryDirectory() as tmp:
                 # TODO abstract the download of the video url into the YoutubeScraper class
                 out_tmpl = os.path.join(tmp, "%(id)s.%(ext)s")
@@ -98,9 +103,9 @@ async def youtube_preview_scrape(
                     "extractor_args": {
                         "youtube": {
                             "player_client": ["default", "web_safari"],
-                            "player_js_version": ["actual"]
+                            "player_js_version": ["actual"],
                         }
-                    }
+                    },
                 }
 
                 with YoutubeDL(ydl_opts) as ydl:  # type: ignore
@@ -108,7 +113,11 @@ async def youtube_preview_scrape(
                     if rc != 0:
                         raise RuntimeError("yt-dlp failed")
 
-                files = [f for f in os.listdir(tmp) if not f.endswith(".part") and not f.endswith(".info.json")]
+                files = [
+                    f
+                    for f in os.listdir(tmp)
+                    if not f.endswith(".part") and not f.endswith(".info.json")
+                ]
                 if not files:
                     raise RuntimeError("No file produced")
 
@@ -117,13 +126,14 @@ async def youtube_preview_scrape(
 
                 out = os.path.join(tmp, "preview.m4a")
 
-                if item.durationSec <= 60:
-                    req.previewStartSec = 0
+                start_sec = float(req.previewStartSec)
+                if getattr(item, "durationSec", 0) > 0 and item.durationSec <= 60:
+                    start_sec = 0.0
 
                 scraper.cut_to_m4a(
                     src=src,
                     dst=out,
-                    start=req.previewStartSec,
+                    start=start_sec,
                     dur=req.previewLenSec,
                     bitrate_kbps=req.bitrateKbps,
                 )
@@ -152,6 +162,7 @@ async def youtube_preview_scrape(
             continue
 
     raise HTTPException(status_code=502, detail=f"All candidates failed: {last_err}")
+
 
 # def make_audio_provider(
 #     source: AudioSource,

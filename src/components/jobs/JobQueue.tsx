@@ -1,7 +1,7 @@
 import { api } from "@/../convex/_generated/api";
 import { Doc, Id } from "@/../convex/_generated/dataModel";
-import { useQuery } from "@tanstack/react-query";
 import { convexQuery, useConvex } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
 import React, { useMemo, useState } from "react";
 
 import { type ColumnFiltersState } from "@tanstack/react-table";
@@ -9,7 +9,13 @@ import { type ColumnFiltersState } from "@tanstack/react-table";
 import AlbumReviewDrawer from "@/components/jobs/album-review-drawer";
 import JobQueueTable, { type JobRow } from "@/components/jobs/JobQueueTable";
 import StatusCard from "@/components/jobs/status-card";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function JobQueue() {
   const convex = useConvex();
@@ -83,8 +89,11 @@ export default function JobQueue() {
         args: j.args,
         albumId: albumId ?? spotifyAlbumId,
         albumTitle: album?.title,
-        artistName: getPrimaryArtistName(album) ?? (spotifyAlbumId ? "Unknown Artist" : undefined),
+        artistName:
+          getPrimaryArtistName(album) ??
+          (spotifyAlbumId ? "Unknown Artist" : undefined),
         albumCover: getAlbumCover(album),
+        spotifyAlbumId,
       });
     }
 
@@ -100,7 +109,9 @@ export default function JobQueue() {
       return;
     }
     const interval = setInterval(() => {
-      convex.mutation(api.workflow_jobs.syncJobs, { workflowIds: ids }).catch(() => {});
+      convex
+        .mutation(api.workflow_jobs.syncJobs, { workflowIds: ids })
+        .catch(() => {});
     }, 10000); // 10s
     return () => clearInterval(interval);
   }, [convex, jobRows]);
@@ -114,7 +125,9 @@ export default function JobQueue() {
   } | null>(null);
 
   const [jobGlobalFilter, setJobGlobalFilter] = useState("");
-  const [jobColumnFilters, setJobColumnFilters] = useState<ColumnFiltersState>([]);
+  const [jobColumnFilters, setJobColumnFilters] = useState<ColumnFiltersState>(
+    []
+  );
 
   // Counts & derived filters
   const inQueueCount = useMemo(
@@ -132,21 +145,33 @@ export default function JobQueue() {
   const failedCanceledCount = useMemo(
     () =>
       jobRows.filter(
-        (j) => j.status === "failed" || j.status === "canceled" || j.status === "rejected"
+        (j) =>
+          j.status === "failed" ||
+          j.status === "canceled" ||
+          j.status === "rejected"
       ).length,
     [jobRows]
   );
 
   const isInQueueActive = useMemo(
-    () => jobColumnFilters.some((f) => f.id === "status" && String(f.value) === "queued"),
+    () =>
+      jobColumnFilters.some(
+        (f) => f.id === "status" && String(f.value) === "queued"
+      ),
     [jobColumnFilters]
   );
   const isInProgressActive = useMemo(
-    () => jobColumnFilters.some((f) => f.id === "status" && String(f.value) === "in_progress"),
+    () =>
+      jobColumnFilters.some(
+        (f) => f.id === "status" && String(f.value) === "in_progress"
+      ),
     [jobColumnFilters]
   );
   const isPendingReviewActive = useMemo(
-    () => jobColumnFilters.some((f) => f.id === "status" && String(f.value) === "pending_review"),
+    () =>
+      jobColumnFilters.some(
+        (f) => f.id === "status" && String(f.value) === "pending_review"
+      ),
     [jobColumnFilters]
   );
   const isFailedCanceledActive = useMemo(
@@ -184,8 +209,29 @@ export default function JobQueue() {
   const handleCancelJob = async (workflowId: string) => {
     await convex.mutation(api.workflow_jobs.cancelJob, { workflowId });
   };
-  const handleRetryJob = async (workflowId: string) => {
-    await convex.action(api.workflow_jobs.retryJob, { workflowId });
+  const handleRetryJob = async (
+    workflowId: string,
+    albumId?: string,
+    spotifyAlbumId?: string
+  ) => {
+    void albumId;
+    try {
+      await convex.action(api.workflow_jobs.retryJob, { workflowId });
+    } catch (e) {
+      console.warn(
+        "Retry failed, attempting fallback with Spotify album id",
+        e
+      );
+      if (spotifyAlbumId) {
+        try {
+          await convex.action(api.album_workflow.startAlbumWorkflow, {
+            albumId: spotifyAlbumId,
+          });
+        } catch (e2) {
+          console.error("Fallback startAlbumWorkflow failed", e2);
+        }
+      }
+    }
   };
 
   const handleApprove = async (workflowId: string, albumId?: Id<"album">) => {
@@ -200,7 +246,11 @@ export default function JobQueue() {
     }
   };
 
-  const handleReject = async (workflowId: string, albumId?: Id<"album">, reason?: string) => {
+  const handleReject = async (
+    workflowId: string,
+    albumId?: Id<"album">,
+    reason?: string
+  ) => {
     if (!albumId) return;
     try {
       await convex.mutation(api.db.rejectAlbum, {
@@ -219,10 +269,12 @@ export default function JobQueue() {
         <div className="space-y-8">
           {/* Header */}
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight text-balance">Job Queue</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-balance">
+              Job Queue
+            </h1>
             <p className="text-muted-foreground">
-              Manage workflows: cancel, retry or approve processed albums ({jobRows.length} total
-              jobs)
+              Manage workflows: cancel, retry or approve processed albums (
+              {jobRows.length} total jobs)
             </p>
           </div>
 
@@ -260,7 +312,9 @@ export default function JobQueue() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-xl">Active Jobs</CardTitle>
-                  <CardDescription>Monitor and manage workflow execution</CardDescription>
+                  <CardDescription>
+                    Monitor and manage workflow execution
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -274,13 +328,21 @@ export default function JobQueue() {
                   handleApprove(workflowId, albumId as Id<"album"> | undefined)
                 }
                 onReject={(workflowId: string, albumId?: string) =>
-                  handleReject(workflowId, albumId as Id<"album"> | undefined, undefined)
+                  handleReject(
+                    workflowId,
+                    albumId as Id<"album"> | undefined,
+                    undefined
+                  )
                 }
                 jobGlobalFilter={jobGlobalFilter}
                 onJobGlobalFilterChange={setJobGlobalFilter}
                 jobColumnFilters={jobColumnFilters}
                 onJobColumnFiltersChange={setJobColumnFilters}
-                onOpen={(albumId?: string, workflowId?: string, status?: string) => {
+                onOpen={(
+                  albumId?: string,
+                  workflowId?: string,
+                  status?: string
+                ) => {
                   if (!albumId) return;
                   setSelectedAlbum({
                     albumId: albumId as Id<"album">,
