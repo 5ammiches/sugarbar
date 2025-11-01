@@ -23,7 +23,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_CONVEX_URL: https://descriptive-aardvark-370.convex.cloud
+        VITE_CONVEX_URL: http://127.0.0.1:3210
     ports:
       - "3001:3000"
     env_file: .env
