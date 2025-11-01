@@ -3,7 +3,7 @@ services:
     image: ghcr.io/5ammiches/sugarbar-api:latest
     pull_policy: always
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8001:8000"
     environment:
       # - SERVICE_FQDN_API_8000
       - DISPLAY=localhost:10.0
