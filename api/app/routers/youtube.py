@@ -3,7 +3,6 @@ import os
 import shutil
 import tempfile
 
-from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from yt_dlp import YoutubeDL

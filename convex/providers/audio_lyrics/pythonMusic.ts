@@ -24,6 +24,15 @@ export class PythonMusicProvider implements AudioLyricProvider {
     this.BASE_URL = this.baseUrl;
   }
 
+  private authHeaders(): Record<string, string> {
+    const id = process.env.CF_CLIENT_ID;
+    const secret = process.env.CF_CLIENT_SECRET;
+    const headers: Record<string, string> = {};
+    if (id) headers["x-cf-client-id"] = id;
+    if (secret) headers["x-cf-client-secret"] = secret;
+    return headers;
+  }
+
   async getLyricsByTrack(
     source: LyricSource,
     title: string,
@@ -41,6 +50,7 @@ export class PythonMusicProvider implements AudioLyricProvider {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
+        ...this.authHeaders(),
       },
     });
 
@@ -109,6 +119,7 @@ export class PythonMusicProvider implements AudioLyricProvider {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
+        ...this.authHeaders(),
       },
     });
 
@@ -184,6 +195,7 @@ export class PythonMusicProvider implements AudioLyricProvider {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
+        ...this.authHeaders(),
       },
     });
 

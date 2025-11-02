@@ -10,8 +10,10 @@ class Settings(BaseSettings):
     musixmatch_profile_path: str = ""
     youtube_api_key: str = ""
     youtube_cookies_path: str = ""
+    cf_client_id: str = ""
+    cf_client_secret: str = ""
 
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
 
 @lru_cache

@@ -34,7 +34,6 @@ async def get_lyrics(
                 f"No {provider_name} URL found for '{req.title}' by '{req.artist}'"
             )
 
-        print(f"URL DEBUG: {url}")
         lyrics_md, err = await client.scrape_lyrics(url)
         if lyrics_md is None:
             raise NoResultsError(

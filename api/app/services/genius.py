@@ -108,8 +108,6 @@ class Genius(LyricsBaseProvider):
             raise ProviderError(f"Genius client error: {str(e)}") from e
 
     async def scrape_lyrics(self, url: str) -> Tuple[Optional[str], Optional[str]]:
-        print(f"scraping url {url}")
-        
         prune_filer = PruningContentFilter(
             threshold=0.5,
             threshold_type="fixed",

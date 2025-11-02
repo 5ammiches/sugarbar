@@ -1,9 +1,24 @@
 services:
   api:
     image: sugarbar-api:dev
+    pull_policy: build
     build:
       context: ./api
       dockerfile: Dockerfile
+    command:
+      [
+        "uv",
+        "run",
+        "fastapi",
+        "run",
+        "app/main.py",
+        "--proxy-headers",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload",
+      ]
     ports:
       - "8001:8000"
     volumes:
@@ -16,9 +31,26 @@ services:
       - DISPLAY=localhost:10.0
       - XAUTHORITY=/root/.Xauthority
     env_file: .env
+    develop:
+      watch:
+        - action: sync
+          path: ./api
+          target: /app
+          initial_sync: true
+          ignore:
+            - .venv/
+            - __pycache__/
+            - .pytest_cache/
+            - .mypy_cache/
+            - .ruff_cache/
+        - action: rebuild
+          path: ./api/pyproject.toml
+        - action: rebuild
+          path: ./api/uv.lock
 
   frontend:
     image: sugarbar-frontend:dev
+    pull_policy: build
     build:
       context: .
       dockerfile: Dockerfile
@@ -27,3 +59,17 @@ services:
     ports:
       - "3001:3000"
     env_file: .env
+    develop:
+      watch:
+        - action: rebuild
+          path: ./package.json
+        - action: rebuild
+          path: ./pnpm-lock.yaml
+        - action: rebuild
+          path: ./src
+        - action: rebuild
+          path: ./public
+        - action: rebuild
+          path: ./vite.config.ts
+        - action: rebuild
+          path: ./tsconfig.json
