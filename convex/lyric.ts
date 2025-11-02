@@ -12,7 +12,6 @@ import { PythonMusicProvider } from "./providers/audio_lyrics/pythonMusic";
 // TODO make the REST calls here with Convex Http instead of having them in the pythonMusic.ts client
 function makeLyrics(endpoint?: string) {
   endpoint = endpoint ?? process.env.PYTHON_LYRICS_URL;
-  console.log(endpoint);
   return new PythonMusicProvider(endpoint);
 }
 
@@ -25,9 +24,6 @@ export const getLyricsByTrack = internalAction({
     artist: v.string(),
   },
   handler: async (ctx, args) => {
-    console.log(process.env.CF_CLIENT_ID);
-    console.log(process.env.CF_CLIENT_SECRET);
-
     const client = makeLyrics();
 
     // Generate title variants to handle apostrophe sensitivity (preserve, remove, fallback)

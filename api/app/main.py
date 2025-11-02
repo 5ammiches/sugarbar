@@ -8,23 +8,24 @@ from app.routers import lyrics, youtube
 from app.utils.config import get_settings
 from app.utils.logger import logger, setup_logging_and_handlers
 
-cf_client_id_scheme = APIKeyHeader(
-    name="CF-Access-Client-Id", auto_error=False, scheme_name="cfClientId"
-)
-cf_client_secret_scheme = APIKeyHeader(
-    name="CF-Access-Client-Secret", auto_error=False, scheme_name="cfClientSecret"
-)
+# Was used for API auth but wont be necessary since the api is behind Cloudflare Access and these auth headers are consumed at the edge
+# cf_client_id_scheme = APIKeyHeader(
+#     name="CF-Access-Client-Id", auto_error=False, scheme_name="cfClientId"
+# )
+# cf_client_secret_scheme = APIKeyHeader(
+#     name="CF-Access-Client-Secret", auto_error=False, scheme_name="cfClientSecret"
+# )
 
 
-def require_cf_credentials(
-    client_id: str | None = Depends(cf_client_id_scheme),
-    client_secret: str | None = Depends(cf_client_secret_scheme),
-):
-    settings = get_settings()
-    if not settings.cf_client_id or not settings.cf_client_secret:
-        return
-    if client_id != settings.cf_client_id or client_secret != settings.cf_client_secret:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+# def require_cf_credentials(
+#     client_id: str | None = Depends(cf_client_id_scheme),
+#     client_secret: str | None = Depends(cf_client_secret_scheme),
+# ):
+#     settings = get_settings()
+#     if not settings.cf_client_id or not settings.cf_client_secret:
+#         return
+#     if client_id != settings.cf_client_id or client_secret != settings.cf_client_secret:
+#         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 @asynccontextmanager
@@ -38,7 +39,7 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
-    dependencies=[Depends(require_cf_credentials)],
+    # dependencies=[Depends(require_cf_credentials)],
 )
 setup_logging_and_handlers(app)
 
