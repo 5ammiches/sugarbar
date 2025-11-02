@@ -9,10 +9,10 @@ from app.utils.config import get_settings
 from app.utils.logger import logger, setup_logging_and_handlers
 
 cf_client_id_scheme = APIKeyHeader(
-    name="x-cf-client-id", auto_error=False, scheme_name="cfClientId"
+    name="CF-Access-Client-Id", auto_error=False, scheme_name="cfClientId"
 )
 cf_client_secret_scheme = APIKeyHeader(
-    name="x-cf-client-secret", auto_error=False, scheme_name="cfClientSecret"
+    name="CF-Access-Client-Secret", auto_error=False, scheme_name="cfClientSecret"
 )
 
 

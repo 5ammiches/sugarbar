@@ -25,6 +25,9 @@ export const getLyricsByTrack = internalAction({
     artist: v.string(),
   },
   handler: async (ctx, args) => {
+    console.log(process.env.CF_CLIENT_ID);
+    console.log(process.env.CF_CLIENT_SECRET);
+
     const client = makeLyrics();
 
     // Generate title variants to handle apostrophe sensitivity (preserve, remove, fallback)
@@ -45,12 +48,10 @@ export const getLyricsByTrack = internalAction({
           return lyric;
         }
       } catch (e) {
-        // Record error and try next variant
         lastError = e;
       }
     }
 
-    // If no variant returned lyrics, surface the last error if present, otherwise a generic error
     if (lastError) {
       throw lastError;
     }

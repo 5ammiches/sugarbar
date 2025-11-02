@@ -28,8 +28,8 @@ export class PythonMusicProvider implements AudioLyricProvider {
     const id = process.env.CF_CLIENT_ID;
     const secret = process.env.CF_CLIENT_SECRET;
     const headers: Record<string, string> = {};
-    if (id) headers["x-cf-client-id"] = id;
-    if (secret) headers["x-cf-client-secret"] = secret;
+    if (id) headers["CF-Access-Client-Id"] = id;
+    if (secret) headers["CF-Access-Client-Secret"] = secret;
     return headers;
   }
 
