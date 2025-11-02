@@ -35,9 +35,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     lifespan=lifespan,
-    # docs_url=None,
-    # redoc_url=None,
-    # openapi_url=None,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
     dependencies=[Depends(require_cf_credentials)],
 )
 setup_logging_and_handlers(app)
