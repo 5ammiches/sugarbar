@@ -1,8 +1,5 @@
 import { api } from "@/../convex/_generated/api";
-import {
-  Route as SearchRoute,
-  type SearchParams,
-} from "@/routes/_dashboard/index";
+import { Route as SearchRoute, type SearchParams } from "@/routes/admin/index";
 import { Album } from "@/shared/typings";
 import { useConvex } from "@convex-dev/react-query";
 import React from "react";

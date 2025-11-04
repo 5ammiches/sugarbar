@@ -15,21 +15,21 @@ import { Clock, Database, Music, Search } from "lucide-react";
 const items = [
   {
     title: "Search Albums",
-    url: "/",
+    url: "/admin",
     icon: Search,
     id: "search",
     description: "Discover new music",
   },
   {
     title: "Job Queue",
-    url: "/queue",
+    url: "/admin/queue",
     icon: Clock,
     id: "queue",
     description: "Monitor workflows",
   },
   {
     title: "Albums",
-    url: "/database",
+    url: "/admin/database",
     icon: Database,
     id: "database",
     description: "Browse collection",
