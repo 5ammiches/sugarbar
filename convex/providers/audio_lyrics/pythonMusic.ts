@@ -30,7 +30,6 @@ export class PythonMusicProvider implements AudioLyricProvider {
     const headers: Record<string, string> = {};
     if (id) headers["CF-Access-Client-Id"] = id;
     if (secret) headers["CF-Access-Client-Secret"] = secret;
-    console.log(headers);
     return headers;
   }
 
