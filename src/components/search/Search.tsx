@@ -46,7 +46,7 @@ export default function Search() {
 
   const setUrlSearch = (next: Partial<SearchParams>, replace = false) =>
     navigate({
-      to: "/",
+      to: "/admin",
       search: (prev: SearchParams): SearchParams => ({ ...prev, ...next }),
       replace,
     });
