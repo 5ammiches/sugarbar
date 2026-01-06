@@ -65,7 +65,7 @@ class Musixmatch(LyricsBaseProvider):
                 {
                     "name": "best_results",
                     "type": "list",
-                    "selector": "div.r-140ww7k",
+                    "selector": "div.r-140ww7k, div.r-1awozwy.r-18u37iz.r-11f147o",
                     "fields": [
                         {
                             "name": "url",
@@ -90,7 +90,7 @@ class Musixmatch(LyricsBaseProvider):
                 {
                     "name": "tracks",
                     "type": "list",
-                    "selector": "div.r-1f720gc",
+                    "selector": "div.r-1f720gc, div.r-eqz5dr.r-1w6e6rj",
                     "fields": [
                         {
                             "name": "url",
@@ -154,7 +154,7 @@ class Musixmatch(LyricsBaseProvider):
                 raw = data[0]
 
                 # FIX normalize functions here for the title and artist
-                query_title = self.normalize_text(title)
+                self.normalize_text(title)
                 # query_artist = self.normalize_text(artist)
                 best_results = []
                 if raw.get("best_results"):
@@ -220,8 +220,8 @@ class Musixmatch(LyricsBaseProvider):
         )
 
         config = CrawlerRunConfig(
-            css_selector="div.css-175oi2r.r-zd98yo",
-            excluded_selector="div.css-175oi2r.r-zd98yo:has(a)",
+            css_selector="div.r-zd98yo",
+            excluded_selector="div.r-zd98yo:has(a)",
             cache_mode=CacheMode.BYPASS,
             markdown_generator=fit_md_generator,
             scan_full_page=True,

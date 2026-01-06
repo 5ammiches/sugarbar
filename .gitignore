@@ -21,3 +21,9 @@ TODO.md
 TODO.md
 routeTree.gen.ts
 .vercel
+
+LOCAL_SETUP.md
+api/README_PROFILE.md
+api/scripts/
+sync_profile.sh
+test_profile_access.py
